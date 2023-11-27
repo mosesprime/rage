@@ -7,8 +7,8 @@ pub mod symbol;
 
 #[derive(Debug)]
 pub struct Token {
-    kind: TokenKind,
-    length: usize,
+    pub kind: TokenKind,
+    pub length: usize,
 }
 
 impl Token {
@@ -17,7 +17,7 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenKind {
     /// 
     Whitespace(Whitespace),
@@ -32,26 +32,24 @@ pub enum TokenKind {
     ///
     Identifier,
 
-    /// End of file.
-    EOF,
     /// Unknown. Likely an error.
     UNKNOWN,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Whitespace {
     Blank,
     NewLine,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Comment {
     Line,
     Block,
     Document,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Literal {
     /// ie. "The qucik brown fox jumps over the lazy dog."
     String,

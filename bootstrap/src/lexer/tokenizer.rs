@@ -148,7 +148,7 @@ impl<'a> Iterator for Tokenizer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let first = match self.consume_next() {
             Some(c) => c,
-            None => return Some(Token::new(TokenKind::EOF, 0)),
+            None => return None,
         };
 
         return match first {
