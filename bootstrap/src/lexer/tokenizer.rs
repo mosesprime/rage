@@ -90,8 +90,9 @@ impl<'a> Tokenizer<'a> {
         let mut length = 1;
         let chars = self.chars.as_str();
         length += self.consume_while(|c| c.is_ascii_alphanumeric() || c == '_');
-        let s = chars.get(..(length - 1)).unwrap();
-        if let Some(keyword) = Keyword::match_keyword(s) {
+        let mut s = String::from(c);
+        s.push_str(chars.get(..(length - 1)).unwrap());
+        if let Some(keyword) = Keyword::match_keyword(s.as_str()) {
             return Token::new(TokenKind::Keyword(keyword), length);
         }
         return Token::new(TokenKind::Identifier, length);
@@ -113,7 +114,8 @@ impl<'a> Tokenizer<'a> {
     fn string(&mut self) -> Token {
         let mut length = 1;
         length += self.consume_while(|c| c != '"');
-        return Token::new(TokenKind::Literal(Literal::String), length);
+        self.consume_next().unwrap(); // consume closing quote
+        return Token::new(TokenKind::Literal(Literal::String), length + 1); // include closing quote
     }
 
     fn character(&mut self) -> Token {
