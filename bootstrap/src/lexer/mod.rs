@@ -7,15 +7,18 @@ use self::tokenizer::Tokenizer;
 mod tokenizer;
 
 /// Compilation unit that tokenizes the source code.
-pub struct Lexer {}
+pub struct Lexer<'a> {
+    input: &'a str
+}
 
-impl Lexer {
-    pub fn new() -> Self {
-        Self {}
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            input,
+        }
     }
 
-    pub fn tokenize(&self, input: &str) -> Vec<Token> {
-        let tokenizer = Tokenizer::new(input.chars());
-        return tokenizer.collect();
+    pub fn tokenize(&self) -> impl Iterator<Item = Token> + '_ {
+        Tokenizer::new(self.input.chars())
     }
 }
