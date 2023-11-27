@@ -2,12 +2,12 @@
 //! 
 //! Entry point for the bootstrap build system.
 
-use std::{time::SystemTime, sync::mpsc, thread};
+use std::{time::SystemTime, thread, sync::mpsc};
 
 use rage_bootstrap::lexer::Lexer;
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let start_now = SystemTime::now();
+    let start_time = SystemTime::now();
     let (err_tx, err_rx) = mpsc::channel();
     thread::spawn(move || {
         let mut lexer = Lexer::new("./examples/demo.rg".into()).unwrap();
@@ -23,6 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     while let Ok(err) = err_rx.recv() {
         eprintln!("{}", err);
     }
-    println!("[DONE] elapsed {} seconds", start_now.elapsed()?.as_secs_f64());
+    println!("[DONE] elapsed {} seconds", start_time.elapsed()?.as_secs_f64());
     Ok(())
 }
