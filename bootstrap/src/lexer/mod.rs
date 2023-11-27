@@ -14,7 +14,7 @@ impl Lexer {
         Self {}
     }
 
-    fn tokenize(input: &str) -> Vec<Token> {
+    pub fn tokenize(&self, input: &str) -> Vec<Token> {
         let tokenizer = Tokenizer::new(input.chars());
         return tokenizer.collect();
     }
