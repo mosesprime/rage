@@ -2,8 +2,8 @@
 
 use self::{symbol::Symbol, keyword::Keyword};
 
-mod keyword;
-mod symbol;
+pub mod keyword;
+pub mod symbol;
 
 #[derive(Debug)]
 pub struct Token {
@@ -48,15 +48,20 @@ pub enum Whitespace {
 pub enum Comment {
     Line,
     Block,
-    // Document,
+    Document,
 }
 
 #[derive(Debug)]
 pub enum Literal {
+    /// ie. "The qucik brown fox jumps over the lazy dog."
     String,
+    /// ie. 1_000, -32, 3.14, 0_u8, 3.7E-7
     Numeric,
+    /// ie. 0b01010101
     Binanry,
+    /// ie. 'a', '\U+00B5'
     Char,
+    /// ie. 0x55AA, 0x000f
     Hex,
 }
 
