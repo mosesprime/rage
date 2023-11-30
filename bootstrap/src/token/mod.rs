@@ -57,9 +57,26 @@ pub enum Literal {
     Numeric,
     /// ie. 0b01010101
     Binanry,
+    /// true or false
+    Bool(Bool),
     /// ie. 'a', '\U+00B5'
     Char,
     /// ie. 0x55AA, 0x000f
     Hex,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Bool {
+    False,
+    True,
+}
+
+impl Bool {
+    pub fn match_bool(s: &str) -> Option<Bool> {
+        match s {
+            "true" => Some(Bool::True),
+            "false" => Some(Bool::False),
+            _ => None,
+        }
+    }
+}

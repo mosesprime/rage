@@ -3,7 +3,7 @@
 
 use std::str::Chars;
 
-use crate::token::{Token, TokenKind, symbol::Symbol, Whitespace, Comment, keyword::Keyword, Literal};
+use crate::token::{Token, TokenKind, symbol::Symbol, Whitespace, Comment, keyword::Keyword, Literal, Bool};
 
 pub struct Tokenizer<'a> {
     chars: Chars<'a>,
@@ -85,14 +85,18 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    /// Handle alphabetic terms. Yields keywords, identifiers, etc.
+    /// Handle alphabetic terms. Yields keywords, identifiers, bool-literal, etc.
     fn term(&mut self, c: char) -> Token {
         let mut length = 1;
         let chars = self.chars.as_str();
         length += self.consume_while(|c| c.is_ascii_alphanumeric() || c == '_');
         let mut s = String::from(c);
         s.push_str(chars.get(..(length - 1)).unwrap());
-        if let Some(keyword) = Keyword::match_keyword(s.as_str()) {
+        let s = s.as_str();
+        if let Some(bool) = Bool::match_bool(s) {
+            return Token::new(TokenKind::Literal(Literal::Bool(bool)), length)
+        }
+        if let Some(keyword) = Keyword::match_keyword(s) {
             return Token::new(TokenKind::Keyword(keyword), length);
         }
         return Token::new(TokenKind::Identifier, length);
