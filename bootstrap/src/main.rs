@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     let error_manifest = ErrorManifest::new();
     let lexer_err_man = error_manifest.clone();
 
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         let mut lexer = Lexer::new(source_path).unwrap();
         lexer.run(lexer_err_man).unwrap();
         let tokens = lexer.report();
@@ -29,6 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         }     
     });
 
+    handle.join().unwrap();
+
     let (num_errors, num_warnings) = error_manifest.lock().unwrap().report();
     if num_errors == 0 && num_warnings == 0 {
         println!(
@@ -37,7 +39,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
             start_time.elapsed()?.as_secs_f64()
         );
     } else {
-        println!(
+        error_manifest.lock().unwrap().print();
+        eprintln!(
             "[DONE] elapsed {} seconds with {} errors and {} warnings", 
             start_time.elapsed()?.as_secs_f64(),
             TextColor::wrap_text(num_errors.to_string(), TextColor::Red),

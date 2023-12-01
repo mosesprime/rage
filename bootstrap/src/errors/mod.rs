@@ -27,10 +27,12 @@ impl ErrorManifest {
         (error_counter, warning_counter)
     }
 
+    /// Prints out the collection of errors & warnings to the stdout.
     pub fn print(&self) {
         self.errors.iter().for_each(|e| { println!("{e}"); });
     }
 
+    /// Add a new error to report. Panics if [`CompErrorLevel::Panic`].
     pub fn push(&mut self, error: CompError) {
         if error.level == CompErrorLevel::Panic {
             println!("{error}");
