@@ -4,7 +4,7 @@
 
 use std::{time::SystemTime, thread, path::PathBuf};
 
-use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest};
+use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser};
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let start_time = SystemTime::now();
@@ -14,21 +14,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         TextColor::wrap_text("STARTING".to_string(), TextColor::Green),
         &source_path.display()
     );
+
     let error_manifest = ErrorManifest::new();
     let lexer_err_man = error_manifest.clone();
 
     let handle = thread::spawn(move || {
         let mut lexer = Lexer::new(source_path).unwrap();
-        lexer.run(lexer_err_man).unwrap();
-        let tokens = lexer.report();
-        let mut cursor = 0;
-        for token in tokens {
-            let value = lexer.get_value(cursor, token.length).unwrap();
-            println!("{token:?} {value:?}");
-            cursor += token.length;
-        }     
+        let mut parser = Parser::new();
+        let tokens = lexer.run(lexer_err_man);
+        parser.run(tokens);
     });
-
     handle.join().unwrap();
 
     let (num_errors, num_warnings) = error_manifest.lock().unwrap().report();

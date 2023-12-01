@@ -12,7 +12,6 @@ mod tokenizer;
 pub struct Lexer {
     path: PathBuf,
     input: String,
-    output: Vec<Token>,
 }
 
 impl Lexer {
@@ -22,32 +21,26 @@ impl Lexer {
         Ok(Self {
             path,
             input,
-            output: Default::default(),
         })
     }
 
-    /// 
-    pub fn run(&mut self, err_manifest: Arc<Mutex<ErrorManifest>>) -> Result<(), Box<dyn std::error::Error>> {
-        self.output = self.tokenize().collect();
+    /// Executes the [`Tokenizer`] and runs all analysis passes.
+    /// Returns an iterator over the lexed tokens.
+    pub fn run(&mut self, err_manifest: Arc<Mutex<ErrorManifest>>) -> impl Iterator<Item = Token> + '_ {
         let mut cursor = 0;
-        for token in &self.output {
-            if token.kind == TokenKind::UNKNOWN {
-                let msg = format!("unknown token: {}", self.get_value(cursor, token.length).unwrap()); // should not error as length should be valid during tokenize 
-                err_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, self.path.clone(), cursor, token.length, msg));
+        let path = self.path.clone();
+        let mut tokenized = Tokenizer::new(self.input.chars());
+        std::iter::from_fn(move || {
+            // TODO: add analysis passes
+            if let Some(token) = tokenized.next() {
+                if token.kind == TokenKind::UNKNOWN {
+                    err_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, path.clone(), cursor, token.length, "unknown token".to_string()));
+                }
+                cursor += token.length;
+                return Some(token);
             }
-            cursor += token.length;
-        }
-        Ok(())
-    }
-
-    ///
-    pub fn report(&self) -> &Vec<Token> {
-        &self.output
-    }
-
-    /// Generate an [`Iterator`] over the input that produces [`Token`].
-    pub fn tokenize(&self) -> impl Iterator<Item = Token> + '_ {
-        Tokenizer::new(self.input.chars())
+            return None;
+        })
     }
 
     /// Gets a slice of the input if able.

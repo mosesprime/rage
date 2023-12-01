@@ -16,8 +16,7 @@ impl Parser {
         }
     }   
 
-    pub fn feed(&mut self, token: Token) {
-        todo!();
-        self.lookback.push(token);
+    pub fn run(&mut self, token_iter: impl Iterator<Item = Token>) {
+        token_iter.for_each(|t| { println!("{t:?}") })
     }
 }
