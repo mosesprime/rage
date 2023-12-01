@@ -1,34 +1,54 @@
 //! Rage Bootstrap Error Handler
 
-use std::{sync::mpsc::Receiver, path::PathBuf, fmt::Display};
+use std::{sync::{Arc, Mutex}, path::PathBuf, fmt::Display};
+
+use crate::TextColor;
 
 /// List of all errors produced during compilation.
+#[derive(Clone)]
 pub struct ErrorManifest {
     errors: Vec<CompError>,
 }
 
-impl Default for ErrorManifest {
-    fn default() -> Self {
-        Self { errors: Default::default() }
-    }
-}
-
 impl ErrorManifest {
-    pub fn handle(&mut self, rx: Receiver<CompError>) {
-        for err in rx {
-            self.errors.push(err)
-        }
-    } 
+    pub fn new() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self { errors: Default::default() }))
+    }
 
-    pub fn report(self) -> Vec<CompError> {
-        self.errors
+    /// Reports the number of errors & warnings in a tupple.
+    pub fn report(&self) -> (usize, usize) {
+        let mut error_counter = 0;
+        let mut warning_counter = 0;
+        self.errors.iter().for_each(|e| match e.level {
+            CompErrorLevel::Warn => warning_counter += 1,
+            CompErrorLevel::Error => error_counter += 1,
+            _ => {},
+        });
+        (error_counter, warning_counter)
+    }
+
+    pub fn print(&self) {
+        self.errors.iter().for_each(|e| { println!("{e}"); });
+    }
+
+    pub fn push(&mut self, error: CompError) {
+        if error.level == CompErrorLevel::Panic {
+            println!("{error}");
+            panic!();
+        }
+        self.errors.push(error)
     }
 }
 
 ///
+#[derive(Clone, PartialEq)]
 pub enum CompErrorLevel {
+    /// Needs fixed before release.
     Warn,
+    /// Will not compile. Throws error at end of phase.
     Error,
+    /// Will not compile. Throws error immediately.
+    Panic,
 }
 
 impl Display for CompErrorLevel {
@@ -36,12 +56,14 @@ impl Display for CompErrorLevel {
         let s = match self {
             CompErrorLevel::Warn => "WARN",
             CompErrorLevel::Error => "ERROR",
+            CompErrorLevel::Panic => "PANIC",
         };
         write!(f, "{}", s)
     }
 }
 
 /// Compilation error.
+#[derive(Clone)]
 pub struct CompError {
     level: CompErrorLevel,
     file_path: PathBuf,
@@ -52,7 +74,12 @@ pub struct CompError {
 
 impl Display for CompError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}] {}:{}-{} {}", self.level, self.file_path.to_string_lossy(), self.position, self.position + self.length, self.reason)
+        let colored_level = match self.level {
+            CompErrorLevel::Warn => TextColor::wrap_text(self.level.to_string(), TextColor::Yellow),
+            CompErrorLevel::Error => TextColor::wrap_text(self.level.to_string(), TextColor::Red),
+            CompErrorLevel::Panic => TextColor::wrap_text(self.level.to_string(), TextColor::BrightRed),
+        };
+        write!(f, "[{}] {}:{}-{} {}", colored_level, self.file_path.to_string_lossy(), self.position, self.position + self.length, self.reason)
     }
 }
 
@@ -67,3 +94,5 @@ impl CompError {
         }
     }
 }
+
+

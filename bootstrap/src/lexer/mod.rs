@@ -1,8 +1,8 @@
 //! Rage Bootstrap Lexer
 
-use std::{sync::mpsc::Sender, path::PathBuf, fs};
+use std::{sync::{mpsc::Sender, Mutex, Arc}, path::PathBuf, fs};
 
-use crate::{token::{Token, TokenKind}, errors::{CompError, CompErrorLevel}};
+use crate::{token::{Token, TokenKind}, errors::{CompError, CompErrorLevel, ErrorManifest}};
 
 use self::tokenizer::Tokenizer;
 
@@ -27,13 +27,13 @@ impl Lexer {
     }
 
     /// 
-    pub fn run(&mut self, err_tx: Sender<CompError>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(&mut self, err_manifest: Arc<Mutex<ErrorManifest>>) -> Result<(), Box<dyn std::error::Error>> {
         self.output = self.tokenize().collect();
         let mut cursor = 0;
         for token in &self.output {
             if token.kind == TokenKind::UNKNOWN {
                 let msg = format!("unknown token: {}", self.get_value(cursor, token.length).unwrap()); // should not error as length should be valid during tokenize 
-                err_tx.send(CompError::new(CompErrorLevel::Error, self.path.clone(), cursor, token.length, msg))?;
+                err_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, self.path.clone(), cursor, token.length, msg));
             }
             cursor += token.length;
         }
