@@ -2,7 +2,7 @@
 
 use std::{sync::{Arc, Mutex}, path::PathBuf, fmt::Display};
 
-use crate::TextColor;
+use crate::{LogLevel};
 
 /// List of all errors produced during compilation.
 #[derive(Clone)]
@@ -29,13 +29,20 @@ impl ErrorManifest {
 
     /// Prints out the collection of errors & warnings to the stdout.
     pub fn print(&self) {
-        self.errors.iter().for_each(|e| { println!("{e}"); });
+        self.errors.iter().for_each(|e| { 
+            let log_level = match e.level {
+                CompErrorLevel::Warn => LogLevel::Warn,
+                CompErrorLevel::Error => LogLevel::Error,
+                _ => unreachable!(),
+            };
+            log_level.println(e); 
+        });
     }
 
     /// Add a new error to report. Panics if [`CompErrorLevel::Panic`].
     pub fn push(&mut self, error: CompError) {
         if error.level == CompErrorLevel::Panic {
-            println!("{error}");
+            LogLevel::Panic.println(error);
             panic!();
         }
         self.errors.push(error)
@@ -76,12 +83,7 @@ pub struct CompError {
 
 impl Display for CompError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let colored_level = match self.level {
-            CompErrorLevel::Warn => TextColor::wrap_text(self.level.to_string(), TextColor::Yellow),
-            CompErrorLevel::Error => TextColor::wrap_text(self.level.to_string(), TextColor::Red),
-            CompErrorLevel::Panic => TextColor::wrap_text(self.level.to_string(), TextColor::BrightRed),
-        };
-        write!(f, "[{}] {}:{}-{} {}", colored_level, self.file_path.to_string_lossy(), self.position, self.position + self.length, self.reason)
+        write!(f, "{}:{}-{} {}", self.file_path.to_string_lossy(), self.position, self.position + self.length, self.reason)
     }
 }
 

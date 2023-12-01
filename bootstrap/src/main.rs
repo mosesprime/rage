@@ -4,16 +4,12 @@
 
 use std::{time::SystemTime, thread, path::PathBuf};
 
-use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser};
+use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser, LogLevel};
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let start_time = SystemTime::now();
     let source_path: PathBuf = "./examples/demo.rg".into();
-    println!(
-        "[{}] {}",
-        TextColor::wrap_text("STARTING".to_string(), TextColor::Green),
-        &source_path.display()
-    );
+    LogLevel::Info.println(format!("{} {}", TextColor::wrap_text("STARTING", TextColor::BrightGreen), &source_path.display()));
 
     let error_manifest = ErrorManifest::new();
     let lexer_err_man = error_manifest.clone();
@@ -28,20 +24,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let (num_errors, num_warnings) = error_manifest.lock().unwrap().report();
     if num_errors == 0 && num_warnings == 0 {
-        println!(
-            "[{}] elapsed {} seconds",
-            TextColor::wrap_text("SUCCESS".to_string(), TextColor::BrightGreen),
-            start_time.elapsed()?.as_secs_f64()
+        LogLevel::Info.println(
+            format!("{} elapsed {} seconds", TextColor::wrap_text("SUCCESS", TextColor::BrightGreen), start_time.elapsed()?.as_secs_f64())
         );
     } else {
         error_manifest.lock().unwrap().print();
-        eprintln!(
-            "[DONE] elapsed {} seconds with {} errors and {} warnings", 
-            start_time.elapsed()?.as_secs_f64(),
-            TextColor::wrap_text(num_errors.to_string(), TextColor::Red),
-            TextColor::wrap_text(num_warnings.to_string(), TextColor::Yellow)
+        LogLevel::Error.println(
+            format!(
+                "{} elapsed {} seconds with {} and {}", 
+                TextColor::wrap_text("DONE", TextColor::BrightMagenta),
+                start_time.elapsed()?.as_secs_f64(),
+                TextColor::wrap_text(format!("{} errors", num_errors), TextColor::Red),
+                TextColor::wrap_text(format!("{} warnings", num_warnings), TextColor::Yellow)
+            )
         );
     }
-
     Ok(())
 }
