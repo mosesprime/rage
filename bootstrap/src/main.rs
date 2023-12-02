@@ -4,7 +4,7 @@
 
 use std::{time::SystemTime, thread, path::PathBuf};
 
-use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser, LogLevel};
+use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser, LogLevel, symbol::SymbolManifest};
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let start_time = SystemTime::now();
@@ -14,11 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     let error_manifest = ErrorManifest::new();
     let lexer_err_man = error_manifest.clone();
 
+    let symbol_maifest = SymbolManifest::new();
+
     let handle = thread::spawn(move || {
         let mut lexer = Lexer::new(source_path).unwrap();
         let mut parser = Parser::new();
         let tokens = lexer.run(lexer_err_man);
-        parser.run(tokens);
+        let symbol_table = parser.run(tokens);
+        symbol_maifest.lock().unwrap().add_module("test", symbol_table);
     });
     handle.join().unwrap();
 

@@ -1,11 +1,9 @@
 //! Rage Bootstrap
 
-use std::fmt::Display;
-
 pub mod errors;
 pub mod lexer;
 pub mod parser;
-//pub mod symbol;
+pub mod symbol;
 pub mod token;
 
 pub enum LogLevel {
@@ -83,25 +81,6 @@ impl TextColor {
             TextColor::BrightWhite => 97,
             TextColor::DEFAULT => 97,
         };
-        /**let bg_code = match bg_color {
-            TextColor::Black => 40,
-            TextColor::Red => 41,
-            TextColor::Green => 42,
-            TextColor::Yellow => 43,
-            TextColor::Blue => 44,
-            TextColor::Magenta => 45,
-            TextColor::Cyan => 46,
-            TextColor::White => 47,
-            TextColor::Grey => 100,
-            TextColor::BrightRed => 101,
-            TextColor::BrightGreen => 102,
-            TextColor::BrightYellow => 103,
-            TextColor::BrightBlue => 104,
-            TextColor::BrightMagenta => 105,
-            TextColor::BrightCyan => 106,
-            TextColor::BrightWhite => 107,
-            TextColor::DEFAULT => 40,
-        };*/
         format!("\x1b[0;{}m{}\x1b[0m", fg_code, s.to_string())
     }
 }

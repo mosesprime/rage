@@ -1,13 +1,13 @@
 //! Rage Bootstrap
 //! Symbols
 
-use std::{sync::{Arc, Mutex}, rc::Rc};
+use std::{sync::{Arc, Mutex}, fmt::Debug, collections::HashMap};
 
 const DEFAULT_TABLE_CAPACITY: usize = 1000;
 
 /// The type of the [`Symbol`]
-#[derive(Clone, Copy)]
-pub enum SymbolKind<'a> {
+#[derive(Clone, Copy, Debug)]
+pub enum SymbolKind {
     /// Boolean primative. true, false
     Bool,
     /// Unicode character primative. 'a', '\n', ...
@@ -20,55 +20,82 @@ pub enum SymbolKind<'a> {
     UInt(usize),
     /// Floating point primative. f32, f64, ...
     Float(usize),
-    /// Aliased type. Can be recursive.
-    Alias(&'a SymbolKind<'a>),
+    /// Algebraic data types. Structures, enumerations, ...
+    Adt,
+    /// Function
+    Fn,
+    /// Tuple. ie. (usize, T, f32), (bool, i32), ...
+    Tuple,
     /// Slice of data. [T]
     Slice,
     /// Pointer *
     Ptr,
     /// Reference &
     Ref,
+    /// Aliased type. Can be recursive.
+    Alias,
     /// FFI type.
     Forign,
     /// Infered type. Should not be recursive.
-    Infer(&'a SymbolKind<'a>),
+    Infer,
 
     /// Type can not be determined.
     UNKNOWN,
 }
 
-/// A single entry in the [`SymbolManifest`].
+/// A single entry in the [`SymbolTable`].
+#[derive(Debug)]
 pub struct Symbol<'a> {
     /// Name used in source code for the symbol.
     name: &'a str,
     /// Type
-    kind: SymbolKind<'a>,
+    kind: SymbolKind,
     /// Size of element in bytes.
     size: usize,
     /// Number of elements, aka dimentions.
     width: usize,
 }
 
-/// Stores [`Symbol`] as a structure of vectors.
-/// Should have greater performance than vector of structures.
+impl<'a> Symbol<'a> {
+    pub fn new(name: &'a str, kind: SymbolKind, size: usize, width: usize) -> Self {
+        Self { name, kind, size, width }
+    }
+}
+
 pub struct SymbolManifest<'a> {
-    name: Vec<&'a str>,
-    kind: Vec<SymbolKind<'a>>,
-    size: Vec<usize>,
-    width: Vec<usize>,
+    table_map: HashMap<&'a str, Box<SymbolTable<'a>>>,
 }
 
 impl<'a> SymbolManifest<'a> {
     pub fn new() -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self { 
+        Arc::new(Mutex::new(Self { table_map: Default::default() }))
+    }
+
+    pub fn add_module(&mut self, module_name: &'a str, module_symbol_table: SymbolTable<'a>) {
+        self.table_map.insert(module_name, Box::new(module_symbol_table));
+    }
+}
+
+/// Stores [`Symbol`] as a structure of vectors.
+/// Should have greater performance than vector of structures.
+pub struct SymbolTable<'a> {
+    name: Vec<&'a str>,
+    kind: Vec<SymbolKind>,
+    size: Vec<usize>,
+    width: Vec<usize>,
+}
+
+impl<'a> SymbolTable<'a> {
+    pub fn new() -> Self {
+        Self { 
             name: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
             kind: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
             size: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
             width: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
-        }))
+        }
     }
 
-    pub fn add_symbol(&mut self, entry: Symbol) {
+    pub fn add_symbol(&mut self, entry: Symbol<'a>) {
         self.name.push(entry.name);
         self.kind.push(entry.kind);
         self.size.push(entry.size);
