@@ -5,7 +5,7 @@ use self::{symbol::Symbol, keyword::Keyword};
 pub mod keyword;
 pub mod symbol;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub length: usize,
