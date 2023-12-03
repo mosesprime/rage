@@ -20,8 +20,14 @@ impl ErrorManifest {
         let mut error_counter = 0;
         let mut warning_counter = 0;
         self.errors.iter().for_each(|e| match e.level {
-            CompErrorLevel::Warn => warning_counter += 1,
-            CompErrorLevel::Error => error_counter += 1,
+            CompErrorLevel::Warn => {
+                warning_counter += 1;
+                LogLevel::Warn.println(format!("{e}"));
+            },
+            CompErrorLevel::Error => {
+                error_counter += 1;
+                LogLevel::Error.println(format!("{e}"))
+            },
             _ => {},
         });
         (error_counter, warning_counter)

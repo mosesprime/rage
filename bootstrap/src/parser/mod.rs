@@ -5,7 +5,6 @@ use crate::{token::{Token, TokenKind}, symbol::{SymbolTable}};
 
 use self::scope::Block;
 
-const DEFAULT_LOOKBACK_CAPACITY: usize = 10;
 mod scope;
 
 /// Parsing compilation unit.
@@ -22,8 +21,8 @@ impl<'a> Parser<'a> {
         }
     }   
 
-    pub fn run(mut self, mut token_iter: impl Iterator<Item = Token>) -> SymbolTable<'a> {
-        let blocks = Block::scan(&token_iter.collect());
+    pub fn run(mut self, tokens: &Vec<Token>) -> SymbolTable<'a> {
+        let blocks = Block::scan(tokens);
         blocks.iter().for_each(|b| println!("{b:?}"));
         self.symbol_table
     }
