@@ -1,6 +1,6 @@
 //! Rage Bootstrap Lexer
 
-use std::{sync::{mpsc::Sender, Mutex, Arc}, path::PathBuf, fs, str::Chars, iter::Take, error::Error};
+use std::{sync::{Mutex, Arc}, path::PathBuf, fs};
 
 use crate::{token::{Token, TokenKind}, errors::{CompError, CompErrorLevel, ErrorManifest}};
 

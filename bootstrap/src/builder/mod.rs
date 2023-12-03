@@ -24,6 +24,7 @@ impl Builder {
     }
 
     pub fn run(&mut self) {
+        log::debug!("starting builder on {}", self.path.display());
         self.error_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, self.path.clone(), 0, 0, "test error".to_string()));
         self.tokens = Lexer::tokenize(self.source.clone());
         self.tokens.iter().for_each(|t| println!("{t:?}"));

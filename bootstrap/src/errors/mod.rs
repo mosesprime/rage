@@ -2,8 +2,6 @@
 
 use std::{sync::{Arc, Mutex}, path::PathBuf, fmt::Display};
 
-use crate::logging::LogLevel;
-
 /// List of all errors produced during compilation.
 #[derive(Clone)]
 pub struct ErrorManifest {
@@ -22,40 +20,30 @@ impl ErrorManifest {
         self.errors.iter().for_each(|e| match e.level {
             CompErrorLevel::Warn => {
                 warning_counter += 1;
-                LogLevel::Warn.println(format!("{e}"));
+                log::warn!("Compilation Warning: {e}");
             },
             CompErrorLevel::Error => {
                 error_counter += 1;
-                LogLevel::Error.println(format!("{e}"))
+                log::error!("Compilation Error: {e}");
             },
             _ => {},
         });
         (error_counter, warning_counter)
     }
 
-    /// Prints out the collection of errors & warnings to the stdout.
-    pub fn print(&self) {
-        self.errors.iter().for_each(|e| { 
-            let log_level = match e.level {
-                CompErrorLevel::Warn => LogLevel::Warn,
-                CompErrorLevel::Error => LogLevel::Error,
-                _ => unreachable!(),
-            };
-            log_level.println(e); 
-        });
-    }
-
-    /// Add a new error to report. Panics if [`CompErrorLevel::Panic`].
+    /// Add a new error to report.
+    /// # Panic 
+    /// Will panic if [`CompErrorLevel::Panic`].
     pub fn push(&mut self, error: CompError) {
         if error.level == CompErrorLevel::Panic {
-            LogLevel::Panic.println(error);
+            log::error!("Compilation Paniced: {error}");
             panic!();
         }
         self.errors.push(error)
     }
 }
 
-///
+/// 
 #[derive(Clone, PartialEq)]
 pub enum CompErrorLevel {
     /// Needs fixed before release.
@@ -64,17 +52,6 @@ pub enum CompErrorLevel {
     Error,
     /// Will not compile. Throws error immediately.
     Panic,
-}
-
-impl Display for CompErrorLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            CompErrorLevel::Warn => "WARN",
-            CompErrorLevel::Error => "ERROR",
-            CompErrorLevel::Panic => "PANIC",
-        };
-        write!(f, "{}", s)
-    }
 }
 
 /// Compilation error.
@@ -89,7 +66,7 @@ pub struct CompError {
 
 impl Display for CompError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}-{} {}", self.file_path.to_string_lossy(), self.position, self.position + self.length, self.reason)
+        write!(f, "{}:{}:{} {}", self.file_path.display(), self.position, self.position + self.length, self.reason)
     }
 }
 

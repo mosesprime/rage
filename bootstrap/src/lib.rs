@@ -1,12 +1,9 @@
 //! Rage Bootstrap
 
-use std::{path::PathBuf, thread::{JoinHandle, self}, sync::{mpsc::{Sender, Receiver, self}, Arc, Mutex}, error::Error, fs, usize};
+use std::{path::PathBuf, thread::{JoinHandle, self}, sync::{Arc, Mutex}, usize};
 
 use builder::Builder;
-use errors::{CompError, ErrorManifest};
-use lexer::Lexer;
-use parser::Parser;
-use token::Token;
+use errors::ErrorManifest;
 
 pub mod builder;
 pub mod errors;
@@ -35,7 +32,7 @@ impl Compiler {
         })
     } 
 
-    pub fn run(mut self) -> Result<(usize, usize), Box<dyn std::error::Error>> {
+    pub fn run(self) -> Result<(usize, usize), Box<dyn std::error::Error>> {
         // TODO: add other files to unclaimed source files
         let mut handles: Vec<JoinHandle<()>> = vec![];
         for _ in 0..self.num_builders {

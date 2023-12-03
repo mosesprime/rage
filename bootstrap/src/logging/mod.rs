@@ -1,26 +1,5 @@
 //! Rage Bootstrap Logging
 
-pub enum LogLevel {
-    Info,
-    Debug,
-    Warn,
-    Error,
-    Panic,
-}
-
-impl LogLevel {
-    pub fn println(&self, msg: impl ToString) {
-        let log_level = match self {
-            LogLevel::Info => TextColor::wrap_text("INFO", TextColor::BrightCyan),
-            LogLevel::Debug => TextColor::wrap_text("DEBUG", TextColor::BrightMagenta),
-            LogLevel::Warn => TextColor::wrap_text("WARN", TextColor::BrightYellow),
-            LogLevel::Error => TextColor::wrap_text("ERROR", TextColor::BrightRed),
-            LogLevel::Panic => TextColor::wrap_text("PANIC", TextColor::BrightRed),
-        };
-        println!("[Bootstrap {}] {}", log_level, msg.to_string())
-    }
-}
-
 pub enum TextColor {
     Black,
     Red,

@@ -38,9 +38,3 @@ impl Block {
         return Err(issues);
     }
 }
-
-/// Tokens between '(' and ')'
-pub struct Parameter {
-    pub start_index: usize,
-    pub end_index: usize,
-} 

@@ -1,7 +1,6 @@
 //! Rage Bootstrap Parser
 
-
-use crate::{token::{Token, TokenKind}, symbol::{SymbolTable}};
+use crate::{symbol::SymbolTable, token::Token};
 
 use self::scope::Block;
 
@@ -21,7 +20,7 @@ impl<'a> Parser<'a> {
         }
     }   
 
-    pub fn run(mut self, tokens: &Vec<Token>) -> SymbolTable<'a> {
+    pub fn run(self, tokens: &Vec<Token>) -> SymbolTable<'a> {
         let blocks = Block::scan(tokens);
         blocks.iter().for_each(|b| println!("{b:?}"));
         self.symbol_table
