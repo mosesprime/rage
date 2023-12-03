@@ -1,5 +1,9 @@
 //! Rage Bootstrap Builder Unit
 
+use std::{sync::{Arc, Mutex}, path::PathBuf, error::Error, fs};
+
+use crate::{errors::{ErrorManifest, CompError, CompErrorLevel}, token::Token, lexer::Lexer, parser::Parser};
+
 /// Single compilation worker.
 pub struct Builder {
     error_manifest: Arc<Mutex<ErrorManifest>>,
@@ -20,7 +24,7 @@ impl Builder {
     }
 
     pub fn run(&mut self) {
-        self.error_manifest.lock().unwrap().push(CompError::new(errors::CompErrorLevel::Error, self.path.clone(), 0, 0, "test error".to_string()));
+        self.error_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, self.path.clone(), 0, 0, "test error".to_string()));
         self.tokens = Lexer::tokenize(self.source.clone());
         self.tokens.iter().for_each(|t| println!("{t:?}"));
         let parser = Parser::new();
