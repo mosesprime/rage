@@ -4,7 +4,7 @@
 
 use std::{time::SystemTime, thread, path::PathBuf};
 
-use rage_bootstrap::{lexer::Lexer, TextColor, errors::ErrorManifest, parser::Parser, LogLevel, symbol::SymbolManifest};
+use rage_bootstrap::{lexer::Lexer, errors::ErrorManifest, parser::Parser, symbol::SymbolManifest, logging::{TextColor, LogLevel}};
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let start_time = SystemTime::now();

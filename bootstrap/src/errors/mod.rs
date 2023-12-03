@@ -2,7 +2,7 @@
 
 use std::{sync::{Arc, Mutex}, path::PathBuf, fmt::Display};
 
-use crate::{LogLevel};
+use crate::logging::LogLevel;
 
 /// List of all errors produced during compilation.
 #[derive(Clone)]
