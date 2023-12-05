@@ -1,8 +1,8 @@
 //! Rage Bootstrap Lexer
 
-use std::{sync::{Mutex, Arc}, path::PathBuf, fs};
+use std::{sync::{Mutex, Arc}, path::PathBuf, fs, str::Chars, ops::Deref};
 
-use crate::{token::{Token, TokenKind}, errors::{CompError, CompErrorLevel, ErrorManifest}};
+use crate::{token::{Token, TokenKind, Lexeme, LexemeKind}, errors::{CompError, CompErrorLevel, ErrorManifest}};
 
 use self::tokenizer::Tokenizer;
 
@@ -55,5 +55,70 @@ impl Lexer {
     /// Gets a single line of the input if able.
     pub fn get_line(&self, line_num: usize) -> Option<&str> {
         self.input.lines().nth(line_num)
+    }
+}
+
+pub struct Scanner<'a> {
+    path: PathBuf,
+    input: &'a str,
+    chars: std::iter::Peekable<Chars<'a>>,
+    buffer: Vec<char>,
+}
+
+impl<'a> Scanner<'a> {
+    pub fn new(path: PathBuf) -> std::io::Result<Self> {
+        let source = fs::read_to_string(&path)?;
+        Ok(Self {
+            path,
+            input: &source,
+            chars: source.chars().peekable(),
+            buffer: Default::default(),
+        })
+    } 
+
+    fn consume_next(&mut self) -> Option<char> {
+        self.chars.next()
+    }
+
+    fn consume_while(&mut self, mut prediate: impl FnMut(char)->bool) -> &str{
+        while self.chars.peek().is_some_and(|c| prediate(*c)) && !self.is_end_of_file() {
+            self.buffer.push(self.chars.next().unwrap())
+        }
+        todo!()
+    }
+
+    fn peek_first(&self) -> Option<char> {
+        self.chars.clone().next()
+    }
+    
+    fn peek_second(&self) -> Option<char> {
+        let mut iter = self.chars.clone();
+        iter.next()?;
+        iter.next()
+    }
+    
+    fn is_end_of_file(&self) -> bool {
+        self.chars.as_str().is_empty()
+    }
+    
+    fn handle_whitespace(&mut self) -> Lexeme {
+        self.chars.take_while(|c| c.is_ascii_whitespace());
+        Lexeme::new(LexemeKind::Whitespace { length: take.len() + 1 }, buf.concat(take.deref()), take.len() + 1)
+    }
+}
+
+impl<'a> Iterator for Scanner<'a> {
+    type Item = Lexeme<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let first = self.chars.peek()?;
+
+        return match first {
+            c if c.is_ascii_whitespace() => Some(self.handle_whitespace()),
+            c if c.is_ascii_digit() => Some(self.handle_digit()),
+            c if c.is_ascii_alphabetic() => Some(self.handle_alphabetic()),
+            c if c.is_ascii_punctuation() => Some(self.handle_punctuation()),
+            _ => Some(self.handle_unknown()),
+        }
     }
 }
