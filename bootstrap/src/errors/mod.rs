@@ -1,85 +1,41 @@
 //! Rage Bootstrap Error Handler
 
-use std::{sync::{Arc, Mutex}, path::PathBuf, fmt::Display};
-
-/// List of all errors produced during compilation.
-#[derive(Clone)]
-pub struct ErrorManifest {
-    errors: Vec<CompError>,
-}
-
-impl ErrorManifest {
-    pub fn new() -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self { errors: Default::default() }))
-    }
-
-    /// Reports the number of errors & warnings in a tupple.
-    pub fn report(&self) -> (usize, usize) {
-        let mut error_counter = 0;
-        let mut warning_counter = 0;
-        self.errors.iter().for_each(|e| match e.level {
-            CompErrorLevel::Warn => {
-                warning_counter += 1;
-                log::warn!("Compilation Warning: {e}");
-            },
-            CompErrorLevel::Error => {
-                error_counter += 1;
-                log::error!("Compilation Error: {e}");
-            },
-            _ => {},
-        });
-        (error_counter, warning_counter)
-    }
-
-    /// Add a new error to report.
-    /// # Panic 
-    /// Will panic if [`CompErrorLevel::Panic`].
-    pub fn push(&mut self, error: CompError) {
-        if error.level == CompErrorLevel::Panic {
-            log::error!("Compilation Paniced: {error}");
-            panic!();
-        }
-        self.errors.push(error)
-    }
-}
-
-/// 
-#[derive(Clone, PartialEq)]
-pub enum CompErrorLevel {
-    /// Needs fixed before release.
-    Warn,
-    /// Will not compile. Throws error at end of phase.
-    Error,
-    /// Will not compile. Throws error immediately.
-    Panic,
-}
+use std::{fmt::Display, path::PathBuf};
 
 /// Compilation error.
 #[derive(Clone)]
 pub struct CompError {
-    level: CompErrorLevel,
     file_path: PathBuf,
-    position: usize,
-    length: usize,
+    line_num: usize,
+    char_pos: usize,
     reason: String,
 }
 
 impl Display for CompError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}:{} {}", self.file_path.display(), self.position, self.position + self.length, self.reason)
+        write!(
+            f,
+            "{}:{}:{} {}",
+            self.file_path.display(),
+            self.line_num,
+            self.char_pos,
+            self.reason
+        )
     }
 }
 
 impl CompError {
-    pub fn new(level: CompErrorLevel, file_path: PathBuf, position: usize, length: usize, reason: String) -> Self {
+    pub fn new(
+        file_path: PathBuf,
+        line_num: usize,
+        char_pos: usize,
+        reason: impl ToString,
+    ) -> Self {
         Self {
-            level,
             file_path,
-            position,
-            length,
-            reason,
+            line_num,
+            char_pos,
+            reason: reason.to_string(),
         }
     }
 }
-
-

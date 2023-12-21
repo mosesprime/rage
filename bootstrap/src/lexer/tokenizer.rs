@@ -3,7 +3,9 @@
 
 use std::str::Chars;
 
-use crate::token::{Token, TokenKind, symbol::Symbol, Whitespace, Comment, keyword::Keyword, Literal, Bool};
+use crate::token::{
+    keyword::Keyword, symbol::Symbol, Bool, Comment, Literal, Token, TokenKind, Whitespace,
+};
 
 pub struct Tokenizer<'a> {
     chars: Chars<'a>,
@@ -34,7 +36,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Consumes while the predicate is true. Returns number of [`char`] consumed.
-    fn consume_while(&mut self, mut predicate: impl FnMut(char)->bool) -> usize {
+    fn consume_while(&mut self, mut predicate: impl FnMut(char) -> bool) -> usize {
         let mut len = 0;
         while self.peek_first().is_some_and(|c| predicate(c)) && !self.is_eof() {
             len += 1;
@@ -48,9 +50,9 @@ impl<'a> Tokenizer<'a> {
         let mut length = 1;
         if c == '\n' {
             length += self.consume_while(|c| c == '\n');
-            return Token::new(TokenKind::Whitespace(Whitespace::NewLine), length); 
+            return Token::new(TokenKind::Whitespace(Whitespace::NewLine), length);
         }
-        length += self.consume_while(|c| c.is_ascii_whitespace() && c != '\n' );
+        length += self.consume_while(|c| c.is_ascii_whitespace() && c != '\n');
         return Token::new(TokenKind::Whitespace(Whitespace::Blank), length);
     }
 
@@ -63,8 +65,8 @@ impl<'a> Tokenizer<'a> {
                 loop {
                     length += 1;
                     if let Some(new) = self.consume_next() {
-                        if prev == '*' && new == '/' { 
-                            break; 
+                        if prev == '*' && new == '/' {
+                            break;
                         } else {
                             prev = new;
                         }
@@ -73,15 +75,15 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 return Token::new(TokenKind::Comment(Comment::Block), length);
-            },
+            }
             Some('/') => {
                 length += self.consume_while(|c| c != '\n');
                 return Token::new(TokenKind::Comment(Comment::Document), length);
-            },
+            }
             _ => {
                 length += self.consume_while(|c| c != '\n');
                 return Token::new(TokenKind::Comment(Comment::Line), length);
-            },
+            }
         }
     }
 
@@ -94,13 +96,13 @@ impl<'a> Tokenizer<'a> {
         s.push_str(chars.get(..(length - 1)).unwrap());
         let s = s.as_str();
         if let Some(bool) = Bool::match_bool(s) {
-            return Token::new(TokenKind::Literal(Literal::Bool(bool)), length)
+            return Token::new(TokenKind::Literal(Literal::Bool(bool)), length);
         }
         if let Some(keyword) = Keyword::match_keyword(s) {
             return Token::new(TokenKind::Keyword(keyword), length);
         }
         return Token::new(TokenKind::Identifier, length);
-    } 
+    }
 
     fn number(&mut self, c: char) -> Token {
         let mut length = 1;
@@ -108,7 +110,7 @@ impl<'a> Tokenizer<'a> {
             match self.peek_first() {
                 Some('x') => todo!(),
                 Some('b') => todo!(),
-                _ => {},
+                _ => {}
             }
         }
         length += self.consume_while(|c| c.is_ascii_digit());
@@ -130,7 +132,7 @@ impl<'a> Tokenizer<'a> {
     fn symbol(&mut self, c: char) -> Token {
         if let Some(s) = Symbol::match_symbol(&[c]) {
             if let Some(c2) = self.peek_first() {
-               if let Some(s2) = Symbol::match_symbol(&[c, c2]) {
+                if let Some(s2) = Symbol::match_symbol(&[c, c2]) {
                     if let Some(c3) = self.peek_second() {
                         if let Some(s3) = Symbol::match_symbol(&[c, c2, c3]) {
                             self.consume_next();
@@ -140,7 +142,7 @@ impl<'a> Tokenizer<'a> {
                     }
                     self.consume_next();
                     return Token::new(TokenKind::Symbol(s2), 2);
-               } 
+                }
             }
             return Token::new(TokenKind::Symbol(s), 1);
         }
@@ -173,7 +175,7 @@ impl<'a> Iterator for Tokenizer<'a> {
             // numeric
             c if c.is_ascii_digit() => Some(self.number(c)),
 
-            // string 
+            // string
             '"' => Some(self.string()),
 
             // character

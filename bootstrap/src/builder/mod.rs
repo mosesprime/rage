@@ -1,31 +1,33 @@
 //! Rage Bootstrap Builder Unit
 
-use std::{sync::{Arc, Mutex}, path::PathBuf, error::Error, fs};
+use std::{fs, io, path::PathBuf};
 
-use crate::{errors::{ErrorManifest, CompError, CompErrorLevel}, token::Token, lexer::Lexer, parser::Parser};
+use crate::{errors::CompError, lexer::Lexer, logging::LogLevel, parser::Parser, token::Token};
+
+#[derive(Default)]
+enum BuilderPhase {
+    #[default]
+    Idle,
+}
 
 /// Single compilation worker.
+#[derive(Default)]
 pub struct Builder {
-    error_manifest: Arc<Mutex<ErrorManifest>>,
-    path: PathBuf,
+    phase: BuilderPhase,
+    path_buf: PathBuf,
+    error_buf: Vec<CompError>,
     source: String,
     tokens: Vec<Token>,
 }
 
 impl Builder {
-    pub fn new(error_manifest: Arc<Mutex<ErrorManifest>>, path: PathBuf) -> Result<Self, Box<dyn Error>> {
-        let source = fs::read_to_string(&path)?;
-        Ok(Self { 
-            error_manifest, 
-            path,
-            source,
-            tokens: Default::default(),
-        })  
+    pub fn source(&mut self, path_buf: PathBuf) -> io::Result<()> {
+        self.source = fs::read_to_string(&path_buf)?;
+        Ok(())
     }
 
     pub fn run(&mut self) {
-        log::debug!("starting builder on {}", self.path.display());
-        self.error_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, self.path.clone(), 0, 0, "test error".to_string()));
+        LogLevel::Debug.println("running builder");
         self.tokens = Lexer::tokenize(self.source.clone());
         self.tokens.iter().for_each(|t| println!("{t:?}"));
         let parser = Parser::new();

@@ -1,8 +1,8 @@
 //! Rage Bootstrap Lexer
 
-use std::{sync::{Mutex, Arc}, path::PathBuf, fs, str::Chars, ops::Deref};
+use std::{fs, path::PathBuf, str::Chars};
 
-use crate::{token::{Token, TokenKind, Lexeme, LexemeKind}, errors::{CompError, CompErrorLevel, ErrorManifest}};
+use crate::token::{Lexeme, LexemeKind, Token, TokenKind};
 
 use self::tokenizer::Tokenizer;
 
@@ -18,15 +18,12 @@ impl Lexer {
     /// Generate a new [`Lexer`] and pre-load with source text.
     pub fn new(path: PathBuf) -> std::io::Result<Self> {
         let input = fs::read_to_string(&path)?;
-        Ok(Self {
-            path,
-            input,
-        })
+        Ok(Self { path, input })
     }
 
     /// Executes the [`Tokenizer`] and runs all analysis passes.
     /// Returns an iterator over the lexed tokens.
-    pub fn run(&mut self, err_manifest: Arc<Mutex<ErrorManifest>>) -> impl Iterator<Item = Token> + '_ {
+    pub fn run(&mut self) -> impl Iterator<Item = Token> + '_ {
         let mut cursor = 0;
         let path = self.path.clone();
         let mut tokenized = Tokenizer::new(self.input.chars());
@@ -34,7 +31,7 @@ impl Lexer {
             // TODO: add analysis passes
             if let Some(token) = tokenized.next() {
                 if token.kind == TokenKind::UNKNOWN {
-                    err_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, path.clone(), cursor, token.length, "unknown token".to_string()));
+                    // TODO: err_manifest.lock().unwrap().push(CompError::new(CompErrorLevel::Error, path.clone(), cursor, token.length, "unknown token".to_string()));
                 }
                 cursor += token.length;
                 return Some(token);
@@ -74,14 +71,14 @@ impl<'a> Scanner<'a> {
             chars: source.chars().peekable(),
             buffer: Default::default(),
         })
-    } 
+    }
 
     fn consume_next(&mut self) -> Option<char> {
         self.chars.next()
     }
 
-    fn consume_while(&mut self, mut prediate: impl FnMut(char)->bool) -> &str{
-        while self.chars.peek().is_some_and(|c| prediate(*c)) && !self.is_end_of_file() {
+    fn consume_while(&mut self, mut prediate: impl FnMut(char) -> bool) -> &str {
+        while self.chars.peek().is_some_and(|c| prediate(*c)) {
             self.buffer.push(self.chars.next().unwrap())
         }
         todo!()
@@ -90,20 +87,22 @@ impl<'a> Scanner<'a> {
     fn peek_first(&self) -> Option<char> {
         self.chars.clone().next()
     }
-    
+
     fn peek_second(&self) -> Option<char> {
         let mut iter = self.chars.clone();
         iter.next()?;
         iter.next()
     }
-    
-    fn is_end_of_file(&self) -> bool {
-        self.chars.as_str().is_empty()
-    }
-    
+
     fn handle_whitespace(&mut self) -> Lexeme {
         self.chars.take_while(|c| c.is_ascii_whitespace());
-        Lexeme::new(LexemeKind::Whitespace { length: take.len() + 1 }, buf.concat(take.deref()), take.len() + 1)
+        Lexeme::new(
+            LexemeKind::Whitespace {
+                length: take.len() + 1,
+            },
+            buf.concat(take.deref()),
+            take.len() + 1,
+        )
     }
 }
 
@@ -119,6 +118,6 @@ impl<'a> Iterator for Scanner<'a> {
             c if c.is_ascii_alphabetic() => Some(self.handle_alphabetic()),
             c if c.is_ascii_punctuation() => Some(self.handle_punctuation()),
             _ => Some(self.handle_unknown()),
-        }
+        };
     }
 }
