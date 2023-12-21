@@ -1,6 +1,6 @@
 //! Rage Bootstrap Token
 
-use self::{symbol::Symbol, keyword::Keyword};
+use self::{keyword::Keyword, symbol::Symbol};
 
 pub mod keyword;
 pub mod symbol;
@@ -19,9 +19,9 @@ impl Token {
 
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
-    /// 
+    ///
     Whitespace(Whitespace),
-    /// 
+    ///
     Comment(Comment),
     ///
     Literal(Literal),
@@ -79,34 +79,4 @@ impl Bool {
             _ => None,
         }
     }
-}
-
-
-#[derive(Debug, PartialEq)]
-pub struct Lexeme<'a> {
-    pub kind: LexemeKind,
-    pub value: &'a str,
-    pub length: usize,
-}
-
-impl<'a> Lexeme<'a> {
-    pub fn new(kind: LexemeKind, value: &'a str, length: usize) -> Self {
-        Self { kind, value, length }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum LexemeKind {
-    /// Spaces, tabs, newlines, etc.
-    Whitespace { length: usize },
-    /// Inline or block comments.
-    Comment { length: usize },
-    /// Strings, numbers, booleans, etc.
-    Literal,
-    /// Operators, punctuation, ets.
-    Symbol,
-    /// Identifiers, definitions, etc.
-    Term,
-    /// Can not determine. Likely an error. 
-    UNKNOWN,
 }

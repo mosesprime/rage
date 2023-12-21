@@ -28,7 +28,8 @@ impl Builder {
 
     pub fn run(&mut self) {
         LogLevel::Debug.println("running builder");
-        self.tokens = Lexer::tokenize(self.source.clone());
+        let lexer = Lexer::new(self.source.as_str());
+        self.tokens = lexer.scan().unwrap();
         self.tokens.iter().for_each(|t| println!("{t:?}"));
         let parser = Parser::new();
         parser.run(&self.tokens);

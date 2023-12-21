@@ -7,6 +7,9 @@ use crate::token::{
     keyword::Keyword, symbol::Symbol, Bool, Comment, Literal, Token, TokenKind, Whitespace,
 };
 
+use super::lexeme::{Lexeme, LexemeKind};
+
+/**
 pub struct Tokenizer<'a> {
     chars: Chars<'a>,
 }
@@ -185,5 +188,37 @@ impl<'a> Iterator for Tokenizer<'a> {
 
             _ => Some(Token::new(TokenKind::UNKNOWN, 1)),
         };
+    }
+}*/
+
+/// Turns [Lexeme]s into [Token]s.
+pub struct Analyzer<'a> {
+    source: &'a str,
+    lexemes: std::iter::Peekable<dyn Iterator<Item = Lexeme>>,
+}
+
+impl<'a> Analyzer<'a> {
+    pub fn new(source: &str, lexemes: impl Iterator<Item = Lexeme>) -> Self {
+        Self {
+            source,
+            lexemes: lexemes.peekable(),
+        }
+    }
+
+    /// Gets a slice of the input if able.
+    pub fn get_value(&self, index: usize, length: usize) -> Option<&str> {
+        self.source.get(index..(index + length))
+    }
+}
+
+impl<'a> Iterator for Analyzer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let lexeme: Lexeme = self.lexemes.next()?;
+        match lexeme.kind {
+            LexemeKind::UNKNOWN => Some(Token::new(TokenKind::UNKNOWN, lexeme.length)),
+            _ => unimplemented!(),
+        }
     }
 }
