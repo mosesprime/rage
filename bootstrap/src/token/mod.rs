@@ -3,17 +3,23 @@
 use self::{keyword::Keyword, symbol::Symbol};
 
 pub mod keyword;
+pub mod store;
 pub mod symbol;
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
+    pub index: usize,
     pub length: usize,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, length: usize) -> Self {
-        Self { kind, length }
+    pub fn new(kind: TokenKind, index: usize, length: usize) -> Self {
+        Self {
+            kind,
+            index,
+            length,
+        }
     }
 }
 

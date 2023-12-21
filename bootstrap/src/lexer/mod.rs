@@ -1,15 +1,10 @@
 //! Rage Bootstrap Lexer
 
-use self::{
-    errors::{LexicalError, LexicalErrorKind},
-    lexeme::{Lexeme, LexemeKind},
-    scanner::Scanner,
-};
-
-mod analyzer;
 pub mod errors;
-mod lexeme;
-mod scanner;
+mod tokenizer;
+
+use crate::token::Token;
+use tokenizer::Tokenizer;
 
 /// Compilation unit that tokenizes the source code.
 pub struct Lexer<'a> {
@@ -21,25 +16,8 @@ impl<'a> Lexer<'a> {
         Self { source }
     }
 
-    pub fn scan(&mut self) -> Result<impl Iterator<Item = Lexeme> + '_, Vec<LexicalError>> {
-        let mut scanner = Scanner::new(self.source.chars());
-        let mut errors: Vec<LexicalError> = vec![];
-        let lexemes = std::iter::from_fn(move || {
-            let lexeme = scanner.next()?;
-            if lexeme.kind == LexemeKind::UNKNOWN {
-                errors.push(LexicalError::new(
-                    LexicalErrorKind::UnknownToken,
-                    lexeme.index as usize,
-                    lexeme.length as usize,
-                    "",
-                ));
-            }
-            Some(lexeme)
-        });
-        if errors.len() > 0 {
-            return Err(errors);
-        }
-        Ok(lexemes)
+    pub fn tokenize(&mut self) -> impl Iterator<Item = Token> + '_ {
+        Tokenizer::new(self.source.chars())
     }
 
     /// Gets a slice of the input if able.

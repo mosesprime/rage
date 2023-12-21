@@ -1,9 +1,13 @@
 //! Rage Bootstrap
 //! Symbols
 
-use std::{sync::{Arc, Mutex}, fmt::Debug, collections::HashMap};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 
-const DEFAULT_TABLE_CAPACITY: usize = 1000;
+const DEFAULT_TABLE_CAPACITY: usize = 1_000;
 
 /// The type of the [`Symbol`]
 #[derive(Clone, Copy, Debug)]
@@ -58,7 +62,12 @@ pub struct Symbol<'a> {
 
 impl<'a> Symbol<'a> {
     pub fn new(name: &'a str, kind: SymbolKind, size: usize, width: usize) -> Self {
-        Self { name, kind, size, width }
+        Self {
+            name,
+            kind,
+            size,
+            width,
+        }
     }
 }
 
@@ -68,11 +77,14 @@ pub struct SymbolManifest<'a> {
 
 impl<'a> SymbolManifest<'a> {
     pub fn new() -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self { table_map: Default::default() }))
+        Arc::new(Mutex::new(Self {
+            table_map: Default::default(),
+        }))
     }
 
     pub fn add_module(&mut self, module_name: &'a str, module_symbol_table: SymbolTable<'a>) {
-        self.table_map.insert(module_name, Box::new(module_symbol_table));
+        self.table_map
+            .insert(module_name, Box::new(module_symbol_table));
     }
 }
 
@@ -87,7 +99,7 @@ pub struct SymbolTable<'a> {
 
 impl<'a> SymbolTable<'a> {
     pub fn new() -> Self {
-        Self { 
+        Self {
             name: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
             kind: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
             size: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
@@ -107,7 +119,12 @@ impl<'a> SymbolTable<'a> {
         let kind = *self.kind.get(index)?;
         let size = *self.size.get(index)?;
         let width = *self.width.get(index)?;
-        Some(Symbol { name, kind, size, width })
+        Some(Symbol {
+            name,
+            kind,
+            size,
+            width,
+        })
     }
 
     pub fn symbol_iter(&self) -> impl Iterator<Item = Symbol> + '_ {
@@ -116,7 +133,12 @@ impl<'a> SymbolTable<'a> {
         let mut sizes = self.size.iter();
         let mut widths = self.width.iter();
         std::iter::from_fn(move || {
-            Some(Symbol{ name: *names.next()?, kind: *kinds.next()?, size: *sizes.next()?, width: *widths.next()? })
+            Some(Symbol {
+                name: *names.next()?,
+                kind: *kinds.next()?,
+                size: *sizes.next()?,
+                width: *widths.next()?,
+            })
         })
     }
 
