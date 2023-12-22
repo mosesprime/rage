@@ -3,18 +3,17 @@
 use self::{keyword::Keyword, symbol::Symbol};
 
 pub mod keyword;
-pub mod store;
 pub mod symbol;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Token {
     pub kind: TokenKind,
-    pub index: usize,
-    pub length: usize,
+    pub index: u32,
+    pub length: u16,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, index: usize, length: usize) -> Self {
+    pub fn new(kind: TokenKind, index: u32, length: u16) -> Self {
         Self {
             kind,
             index,
@@ -23,7 +22,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     ///
     Whitespace(Whitespace),
@@ -42,20 +41,20 @@ pub enum TokenKind {
     UNKNOWN,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Whitespace {
     Blank,
     NewLine,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Comment {
     Line,
     Block,
     Document,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Literal {
     /// ie. "The qucik brown fox jumps over the lazy dog."
     String,
@@ -71,7 +70,7 @@ pub enum Literal {
     Hex,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Bool {
     False,
     True,

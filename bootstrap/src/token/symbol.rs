@@ -1,7 +1,7 @@
 //! Rage Bootstrap
 //! symbol token kind
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Symbol {
     /// !
     Exclamation,
@@ -131,7 +131,7 @@ impl Symbol {
             ['|'] => Symbol::Pipe,
             ['}'] => Symbol::RCurly,
             ['~'] => Symbol::Tilde,
-            ['!', '='] => Symbol::NotEquivalent, 
+            ['!', '='] => Symbol::NotEquivalent,
             ['&', '&'] => Symbol::And,
             ['+', '='] => Symbol::Incriment,
             ['-', '='] => Symbol::Decriment,
@@ -145,7 +145,9 @@ impl Symbol {
             ['|', '|'] => Symbol::Or,
             _ => Symbol::UNKNOWN,
         };
-        if k == Symbol::UNKNOWN { return None; }
+        if k == Symbol::UNKNOWN {
+            return None;
+        }
         Some(k)
     }
 }

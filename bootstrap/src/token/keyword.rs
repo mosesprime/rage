@@ -1,7 +1,7 @@
 //! Rage Bootstrap
 //! keywork token kind
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Keyword {
     If,
     Mut,
@@ -18,9 +18,9 @@ impl Keyword {
             "return" => Keyword::Return,
             _ => Keyword::UNKNOWN,
         };
-        if k == Keyword::UNKNOWN { return None; } 
+        if k == Keyword::UNKNOWN {
+            return None;
+        }
         Some(k)
     }
 }
-
-

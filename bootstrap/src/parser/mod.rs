@@ -1,28 +1,20 @@
 //! Rage Bootstrap Parser
 
-use crate::{symbol::SymbolTable, token::Token};
-
-use self::scope::Block;
-
-mod scope;
+use crate::{log_debug, token::Token};
 
 /// Parsing compilation unit.
 /// Takes tokens from the lexer, analyzes and parses them into an abstract syntax tree.
-pub struct Parser<'a> {
-    /// List of symbols for this parser.
-    symbol_table: SymbolTable<'a>,
-}
+pub struct Parser {}
 
-impl<'a> Parser<'a> {
+impl Parser {
     pub fn new() -> Self {
-        Self { 
-            symbol_table: SymbolTable::new(),
-        }
-    }   
+        Self {}
+    }
 
-    pub fn run(self, tokens: &Vec<Token>) -> SymbolTable<'a> {
-        let blocks = Block::scan(tokens);
-        blocks.iter().for_each(|b| println!("{b:?}"));
-        self.symbol_table
+    pub fn run(self, lexed: impl Iterator<Item = Token>) {
+        //-> Result<(AST, SymbolTable), Vec<ParseError>> {
+        lexed.for_each(|t| {
+            log_debug!("{t:?}");
+        });
     }
 }

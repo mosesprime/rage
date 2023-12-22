@@ -1,39 +1,10 @@
 //! Rage Bootstrap Logging
+//pub(crate) use log_debug;
+//pub(crate) use log_error;
+//pub(crate) use log_info;
+//pub(crate) use log_warn;
 
-/**
-#[macro_export]
-macro_rules! info {
-    ($($arg:tt)*) => {
-        LogLevel::Info.print(format_args!($($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! debug {
-    ($($arg:tt)*) => {
-        LogLevel::Debug.print(format_args!($($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! warn {
-    ($($arg:tt)*) => {
-        LogLevel::Warn.print(format_args!($($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! error {
-    ($($arg:tt)*) => {
-        LogLevel::Error.print(format_args!($($arg)*));
-    };
-}
-
-pub(crate) use debug;
-pub(crate) use error;
-pub(crate) use info;
-pub(crate) use warn;
-*/ // TODO: get macros working?
+use std::fmt::Display;
 
 pub enum TextColor {
     Black,
@@ -89,13 +60,48 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    pub fn println(&self, s: impl ToString) {
+    pub fn println(&self, s: impl Display) {
         let level = match self {
             LogLevel::Info => TextColor::Green.wrap_text("INFO"),
+            #[cfg(debug_assertions)]
             LogLevel::Debug => TextColor::Blue.wrap_text("DEBUG"),
+            #[cfg(not(debug_assertions))]
+            LogLevel::Debug => return,
             LogLevel::Warn => TextColor::Yellow.wrap_text("WARN"),
             LogLevel::Error => TextColor::Red.wrap_text("ERROR"),
         };
-        println!("[{}] {}", level, s.to_string());
+        println!("[{}] {}", level, s);
     }
+}
+
+#[macro_export]
+macro_rules! log_info {
+    ($($arg:tt)*) => {
+        use crate::LogLevel;
+        LogLevel::Info.println(format_args!($($arg)*));
+    };
+}
+
+#[macro_export]
+macro_rules! log_debug {
+    ($($arg:tt)*) => {
+        use crate::LogLevel;
+        LogLevel::Debug.println(format_args!($($arg)*));
+    };
+}
+
+#[macro_export]
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        use crate::LogLevel;
+        LogLevel::Warn.println(format_args!($($arg)*));
+    };
+}
+
+#[macro_export]
+macro_rules! log_error {
+    ($($arg:tt)*) => {
+        use crate::LogLevel;
+        LogLevel::Error.println(format_args!($($arg)*));
+    };
 }
