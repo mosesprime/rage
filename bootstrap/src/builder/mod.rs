@@ -2,9 +2,7 @@
 
 use std::{fs, io, path::PathBuf};
 
-use crate::{
-    errors::CompError, lexer::Lexer, log_debug, log_error, log_info, parser::Parser, token::Token,
-};
+use crate::{errors::CompError, lexer::Lexer, parser::Parser, token::Token};
 
 /// Single compilation worker.
 #[derive(Default)]
@@ -22,7 +20,7 @@ impl Builder {
     }
 
     pub fn run(&mut self) {
-        log_debug!("starting builder for {}", self.path.display());
+        log::debug!("starting builder for {}", self.path.display());
         let lexer = Lexer::new(self.source.as_str());
         let parser = Parser::new();
         parser.run(lexer.tokenize());

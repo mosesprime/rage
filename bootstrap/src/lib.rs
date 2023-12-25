@@ -8,12 +8,11 @@ use std::{
 };
 
 use builder::Builder;
-pub use logging::LogLevel;
 
+pub mod api;
 pub mod builder;
 pub mod errors;
 pub mod lexer;
-pub mod logging;
 pub mod parser;
 pub mod symbol;
 pub mod token;
@@ -47,7 +46,7 @@ impl Compiler {
                         builder
                             .source(path)
                             .map_err(|e| {
-                                log_error!("failed to load source: {}", e);
+                                log::error!("failed to load source: {}", e);
                             })
                             .unwrap();
                         builder.run();
