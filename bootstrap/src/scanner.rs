@@ -1,5 +1,4 @@
-//! Rage Bootstrap
-//! Lexer Tokenizer
+//! Rage Bootstrap Scanner
 
 use std::str::Chars;
 
@@ -7,17 +6,20 @@ use crate::token::{
     keyword::Keyword, symbol::Symbol, Bool, Comment, Literal, Token, TokenKind, Whitespace,
 };
 
-pub struct Lexer<'a> {
+/// Lexiacal Tokenizer.
+pub struct Scanner<'a> {
+    chars: Chars<'a>,
     source: &'a str,
+    next_index: u32,
 }
 
-impl<'a> Lexer<'a> {
+impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
-        Self { source }
-    }
-
-    pub fn tokenize(&self) -> impl Iterator<Item = Token> + '_ {
-        Tokenizer::new(self.source)
+        Self {
+            chars: source.chars(),
+            source,
+            next_index: 0,
+        }
     }
 
     /// Gets a slice of the source if able.
@@ -28,22 +30,6 @@ impl<'a> Lexer<'a> {
     /// Gets a single line of the source if able.
     pub fn get_line(&self, line_num: usize) -> Option<&str> {
         self.source.lines().nth(line_num)
-    }
-}
-
-struct Tokenizer<'a> {
-    chars: Chars<'a>,
-    source: &'a str,
-    next_index: u32,
-}
-
-impl<'a> Tokenizer<'a> {
-    fn new(source: &'a str) -> Self {
-        Self {
-            chars: source.chars(),
-            source,
-            next_index: 0,
-        }
     }
 
     fn next_index(&mut self, length: u16) -> u32 {
@@ -222,7 +208,7 @@ impl<'a> Tokenizer<'a> {
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a> {
+impl<'a> Iterator for Scanner<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -1,65 +1,38 @@
 //! Rage Bootstrap
 
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-    thread::{self, JoinHandle},
-    usize,
-};
+use std::{path::PathBuf, thread};
 
+use anyhow::Context;
 use builder::Builder;
 
-pub mod api;
+use crate::builder::{BuilderJob, BuilderResult};
+
 pub mod builder;
-pub mod errors;
-pub mod lexer;
-pub mod parser;
-pub mod symbol;
+pub mod scanner;
 pub mod token;
 
-pub struct Compiler {
-    threads: usize,
-    handles: Vec<JoinHandle<()>>,
-    source_root: PathBuf,
-    unclaimed_source_files: Arc<Mutex<Vec<PathBuf>>>,
+pub fn compile(root_source_path: PathBuf) -> anyhow::Result<()> {
+    //-> anyhow::Result<InstructionTree> {
+    log::info!("starting compilation: {}", root_source_path.display());
+    let num_cpus = thread::available_parallelism()
+        .context("unable to get number of available threads")?
+        .get();
+    let builder = Builder::new();
+    builder.send_job(BuilderJob::Source {
+        path: root_source_path,
+    });
+    if let BuilderResult::Sourced(source) = builder.recv_result() {
+        builder.send_job(BuilderJob::Tokenize { source: source? });
+        if let BuilderResult::Tokenized(tokens) = builder.recv_result() {
+            for token in tokens {
+                println!("{token:?}");
+            }
+            builder.send_job(BuilderJob::SHUTDOWN);
+        }
+    }
+    Ok(())
 }
 
-impl Compiler {
-    pub fn new(source_root: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
-        let start = vec![source_root.clone()];
-        Ok(Self {
-            threads: std::thread::available_parallelism()?.get(),
-            handles: Default::default(),
-            source_root,
-            unclaimed_source_files: Arc::new(Mutex::new(start)),
-        })
-    }
-
-    pub fn run(mut self) -> Result<(usize, usize), Box<dyn std::error::Error>> {
-        // TODO: add other files to unclaimed source files
-        for _ in 0..self.threads {
-            let available_source_files = Arc::clone(&self.unclaimed_source_files);
-            let handle: JoinHandle<_> = thread::Builder::new()
-                .spawn(move || {
-                    if let Some(path) = available_source_files.lock().unwrap().pop() {
-                        let mut builder = Builder::default();
-                        builder
-                            .source(path)
-                            .map_err(|e| {
-                                log::error!("failed to load source: {}", e);
-                            })
-                            .unwrap();
-                        builder.run();
-                    }
-                })
-                .unwrap();
-            self.handles.push(handle);
-        }
-        for handle in self.handles {
-            handle.join().unwrap();
-        }
-        //let err_report = todo!();
-        //Ok(err_report)
-        Ok((0, 0))
-    }
-}
+//pub fn run(instruction_tree: InstructionTree) -> anyhow::Result<()> {
+//Interpreter::new(instruction_tree).execute()?
+//}
