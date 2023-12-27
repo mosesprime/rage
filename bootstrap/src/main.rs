@@ -15,7 +15,8 @@ fn main() -> anyhow::Result<()> {
 
     let start_time = SystemTime::now();
 
-    let root_path: PathBuf = "./examples/".into();
+    //let root_path: PathBuf = "./examples/".into();
+    let root_path: PathBuf = "./".into();
 
     let mut compiler = Compiler::new(root_path)?;
     let instruction_tree = compiler.run()?;

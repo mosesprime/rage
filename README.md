@@ -6,6 +6,7 @@
 
 ### Bootstrapping
 ```
-RUST_LOG=DEBUG cargo run --manifest-path ./bootstrap/Cargo.toml --release
+cargo run --manifest-path ./bootstrap/Cargo.toml --release
 ```
-Note: `RUST_LOG=DEBUG` is optional. Log level defaults to `INFO`.
+Note: `--release` recommended for performance. Log level defaults to `INFO` for release mode and `DEBUG` otherwise.
+

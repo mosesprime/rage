@@ -4,16 +4,17 @@ use std::{fs, path::PathBuf, result::Result::Ok};
 
 use anyhow::{anyhow, Context};
 
-use crate::{interpreter::InstructionTree, token::Tokenizer};
+use crate::{interpreter::InstructionTree, symbol::SymbolTable, tokenizer::Tokenizer};
 
 /// Front end of bootstrapper.
-pub struct Compiler {
+pub struct Compiler<'a> {
     /// Path to the project directory being compiled.
     root_path: PathBuf,
     source_files: Vec<PathBuf>,
+    symbol_table: SymbolTable<'a>,
 }
 
-impl Compiler {
+impl<'a> Compiler<'a> {
     pub fn new(root_path: PathBuf) -> anyhow::Result<Self> {
         if !root_path.is_dir() {
             return Err(anyhow!("root path must be a directory"));
@@ -28,9 +29,27 @@ impl Compiler {
                     Ok(entry) => {
                         let path = entry.path();
                         if path.is_file() {
-                            source_files.push(path);
+                            if let Some(ext) = path.extension() {
+                                if ext == "rg" {
+                                    log::debug!("adding file {}", path.display());
+                                    source_files.push(path);
+                                } else {
+                                    log::debug!("ignoring file {}", path.display());
+                                }
+                            } else {
+                                log::debug!("no extension for {}", path.display());
+                            }
                         } else if path.is_dir() {
-                            unexplored_dirs.push(path);
+                            if let Some(path_str) = path.to_str() {
+                                if path_str.contains("/.") {
+                                    log::debug!("ignoring directory {}", path.display());
+                                } else {
+                                    log::debug!("searching directory {}", path.display());
+                                    unexplored_dirs.push(path);
+                                }
+                            } else {
+                                unimplemented!();
+                            }
                         } else {
                             return Err(anyhow!("unexpected file type {}", path.display()));
                         }
@@ -39,10 +58,11 @@ impl Compiler {
                 }
             }
         }
-
+        let symbol_table = SymbolTable::default();
         Ok(Self {
             root_path,
             source_files,
+            symbol_table,
         })
     }
 

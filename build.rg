@@ -1,4 +1,5 @@
+//! Rage Build Script
 
-#run build()
-
-build() {}
+#run {
+    println("Hi Mom!")
+}
