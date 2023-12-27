@@ -7,13 +7,13 @@ use crate::token::{
 };
 
 /// Lexiacal Tokenizer.
-pub struct Scanner<'a> {
+pub struct Tokenizer<'a> {
     chars: Chars<'a>,
     source: &'a str,
     next_index: u32,
 }
 
-impl<'a> Scanner<'a> {
+impl<'a> Tokenizer<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
             chars: source.chars(),
@@ -208,7 +208,7 @@ impl<'a> Scanner<'a> {
     }
 }
 
-impl<'a> Iterator for Scanner<'a> {
+impl<'a> Iterator for Tokenizer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

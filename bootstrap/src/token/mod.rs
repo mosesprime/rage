@@ -4,6 +4,9 @@ use self::{keyword::Keyword, symbol::Symbol};
 
 pub mod keyword;
 pub mod symbol;
+mod tokenizer;
+
+pub use tokenizer::Tokenizer;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Token {
