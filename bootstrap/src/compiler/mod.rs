@@ -1,17 +1,22 @@
 //! Rage Bootstrap Compiler
 
-use std::{fs, path::PathBuf, result::Result::Ok};
+use std::{fs, path::PathBuf, result::Result::Ok, str::FromStr, collections::HashMap};
 
 use anyhow::{anyhow, Context};
 
-use crate::{interpreter::InstructionTree, symbol::SymbolTable, tokenizer::Tokenizer};
+use crate::{interpreter::InstructionTree, symbol::SymbolStore, ModuleIndex, parser::{Parser, scanner::Scanner}};
+
+use self::builder::{Builder, BuildResult};
+
+mod builder;
 
 /// Front end of bootstrapper.
+/// Builds and maintains the [`InstructionTree`].
 pub struct Compiler<'a> {
     /// Path to the project directory being compiled.
     root_path: PathBuf,
     source_files: Vec<PathBuf>,
-    symbol_table: SymbolTable<'a>,
+    symbol_store: SymbolStore<'a>,
 }
 
 impl<'a> Compiler<'a> {
@@ -58,20 +63,19 @@ impl<'a> Compiler<'a> {
                 }
             }
         }
-        let symbol_table = SymbolTable::default();
+        let symbol_store = SymbolStore::default();
         Ok(Self {
             root_path,
             source_files,
-            symbol_table,
+            symbol_store,
         })
     }
 
-    pub fn run(mut self) -> anyhow::Result<InstructionTree> {
+    pub async fn run(mut self) -> anyhow::Result<InstructionTree> {
         for file_path in self.source_files {
-            let source = fs::read_to_string(file_path.clone())?;
-            let tokenizer = Tokenizer::new(source.as_str());
-            for token in tokenizer {
-                println!("{token:?}");
+            if let Ok(BuildResult::ReadFile { hash, contents }) = Builder::spawn_and_execute(builder::BuildTask::ReadFile { path: file_path.into() }).await {
+                log::debug!("hash {}", hash);
+                let _ = Builder::spawn_and_execute(builder::BuildTask::Parse { source: contents }).await?;
             }
         }
         Ok(InstructionTree)

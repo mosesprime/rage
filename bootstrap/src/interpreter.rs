@@ -2,6 +2,7 @@
 
 use std::{thread::sleep, time::Duration};
 
+/// Backend of bootstrapper.
 pub struct Interpreter {
     instructions: InstructionTree,
 }

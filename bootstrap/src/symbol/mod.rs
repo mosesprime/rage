@@ -1,60 +1,52 @@
 //! Rage Bootstrap
 
-const DEFAULT_TABLE_CAPACITY: usize = 1_000;
+pub type SymbolIndex = usize;
 
+#[derive(Debug)]
+pub enum SymbolKind {
+    // TODO: add symbol kinds
+    TEST,
+}
+
+#[derive(Debug)]
 pub struct Symbol<'a> {
     name: &'a str,
+    kind: &'a SymbolKind,
     size: u16,
     width: u16,
 }
 
-pub struct SymbolTable<'a> {
-    //next_index: usize,
-    names: Vec<&'a str>,
-    sizes: Vec<u16>,
-    widths: Vec<u16>,
+pub struct SymbolStore<'a> {
+    next_index: SymbolIndex,
+    symbols: Vec<Symbol<'a>>,
 }
 
-impl<'a> Default for SymbolTable<'a> {
+impl Default for SymbolStore<'_> {
     fn default() -> Self {
-        Self {
-            //next_index: 0,
-            names: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
-            sizes: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
-            widths: Vec::with_capacity(DEFAULT_TABLE_CAPACITY),
-        }
+        Self { next_index: 0, symbols: Vec::default() }
     }
 }
 
-impl<'a> SymbolTable<'a> {
-    pub fn add_symbol(&mut self, symbol: Symbol<'a>) {
-        if let Some(i) = self.find_symbol(&symbol.name) {
-            todo!("add another reference to table");
-            return;
-        }
-        //let index = self.next_index;
-        //self.next_index += 1;
-        if (self.names.capacity() - self.names.len()) < 5 {
-            self.names.reserve(DEFAULT_TABLE_CAPACITY);
-            self.sizes.reserve(DEFAULT_TABLE_CAPACITY);
-            self.widths.reserve(DEFAULT_TABLE_CAPACITY);
-        }
-        self.names.push(symbol.name);
-        self.sizes.push(symbol.size);
-        self.widths.push(symbol.width);
+impl<'a> SymbolStore<'a> {
+    pub fn add_symbol(&mut self, symbol: Symbol<'a>) -> SymbolIndex {
+        let index = self.next_index;
+        self.next_index += 1;
+        self.symbols.push(symbol);
+        return index;
     }
 
-    pub fn find_symbol(&self, name: &str) -> Option<usize> {
-        if let Ok(i) = self.names.binary_search_by_key(&name, |&s| s) {
-            return Some(i);
-        }
-        return None;
+    pub fn get_symbol(&self, index: SymbolIndex) -> Option<&Symbol> {
+        self.symbols.get(index)
     }
 
-    pub fn get_symbol(&self, index: usize) -> Option<Symbol> {
-        let name = *self.names.get(index)?;
-        let size = *self.sizes.get(index)?;
-        let width = *self.widths.get(index)?;
-        Some(Symbol { name, size, width })
+    /// Append other [SymbolStore] to self.
+    /// # Returns
+    /// The offset of indicies caused by the merge.
+    pub fn merge(&mut self, mut other: SymbolStore<'a>) -> usize {
+        // PERF: does append impact perf?
+        let i = self.next_index;
+        self.next_index += other.next_index;
+        self.symbols.append(&mut other.symbols);
+        return i;
     }
 }

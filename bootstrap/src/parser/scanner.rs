@@ -1,35 +1,24 @@
-//! Rage Bootstrap Scanner
+//! Rage Bootstrap 
+//! Scanner
 
 use std::str::Chars;
 
-use crate::token::{
-    keyword::Keyword, symbol::Symbol, Bool, Comment, Literal, Token, TokenKind, Whitespace,
-};
+use super::lexeme::{Lexeme, LexemeKind};
 
 /// Lexiacal Tokenizer.
-pub struct Tokenizer<'a> {
+pub struct Scanner<'a> {
     chars: Chars<'a>,
     source: &'a str,
     next_index: u32,
 }
 
-impl<'a> Tokenizer<'a> {
+impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
             chars: source.chars(),
             source,
             next_index: 0,
         }
-    }
-
-    /// Gets a slice of the source if able.
-    pub fn get_value(&self, index: usize, length: usize) -> Option<&str> {
-        self.source.get(index..(index + length))
-    }
-
-    /// Gets a single line of the source if able.
-    pub fn get_line(&self, line_num: usize) -> Option<&str> {
-        self.source.lines().nth(line_num)
     }
 
     fn next_index(&mut self, length: u16) -> u32 {
@@ -60,19 +49,19 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Handle ASCII whitespace.
-    fn whitespace(&mut self, c: char) -> Token {
+    fn whitespace(&mut self, c: char) -> Lexeme {
         let mut length = 1;
         if c == '\n' {
             length += self.consume(|c| c == &'\n');
-            return Token::new(
-                TokenKind::Whitespace(Whitespace::NewLine),
+            return Lexeme::new(
+                LexemeKind::NewLine,
                 self.next_index(length),
                 length,
             );
         } else {
             length += self.consume(|c| c.is_ascii_whitespace() && c != &'\n');
-            return Token::new(
-                TokenKind::Whitespace(Whitespace::Blank),
+            return Lexeme::new(
+                LexemeKind::Space,
                 self.next_index(length),
                 length,
             );
@@ -80,7 +69,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Handle comments.
-    fn comment(&mut self) -> Token {
+    fn comment(&mut self) -> Lexeme {
         let mut length = 1;
         match self.peek_second() {
             Some('*') => {
@@ -97,24 +86,24 @@ impl<'a> Tokenizer<'a> {
                         break;
                     }
                 }
-                return Token::new(
-                    TokenKind::Comment(Comment::Block),
+                return Lexeme::new(
+                    LexemeKind::BlockComment,
                     self.next_index(length),
                     length,
                 );
             }
             Some('/') => {
                 length += self.consume(|c| c != &'\n');
-                return Token::new(
-                    TokenKind::Comment(Comment::Document),
+                return Lexeme::new(
+                    LexemeKind::Documentation,
                     self.next_index(length),
                     length,
                 );
             }
             _ => {
                 length += self.consume(|c| c != &'\n');
-                return Token::new(
-                    TokenKind::Comment(Comment::Line),
+                return Lexeme::new(
+                    LexemeKind::LineComment,
                     self.next_index(length),
                     length,
                 );
@@ -123,24 +112,22 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Handle alphabetic terms. Yields keywords, identifiers, bool-literal, etc.
-    fn term(&mut self) -> Token {
+    fn term(&mut self) -> Lexeme {
         let mut length = 1;
         length += self.consume(|c| c.is_ascii_alphanumeric() || c == &'_');
         let index = self.next_index(length);
         let slice = self
             .source
-            .get(index as usize..(index + length as u32) as usize)
+            .get(index as usize..(index as usize + length as usize))
             .unwrap();
-        if let Some(bool) = Bool::match_bool(slice) {
-            return Token::new(TokenKind::Literal(Literal::Bool(bool)), index, length);
+        if slice == "true" || slice == "false" {
+            return Lexeme::new(LexemeKind::BooleanLiteral, index, length);
+        } else {
+            return Lexeme::new(LexemeKind::Identifier, index, length);
         }
-        if let Some(keyword) = Keyword::match_keyword(slice) {
-            return Token::new(TokenKind::Keyword(keyword), index, length);
-        }
-        return Token::new(TokenKind::Identifier, index, length);
     }
 
-    fn number(&mut self, c: char) -> Token {
+    fn number(&mut self, c: char) -> Lexeme {
         let mut length = 1;
         if c == '0' {
             match self.peek_first() {
@@ -150,66 +137,77 @@ impl<'a> Tokenizer<'a> {
             }
         }
         length += self.consume(|c| c.is_ascii_digit());
-        return Token::new(
-            TokenKind::Literal(Literal::Numeric),
+        return Lexeme::new(
+            LexemeKind::NumericLiteral,
             self.next_index(length),
             length,
         );
     }
 
-    fn string(&mut self) -> Token {
+    fn string(&mut self) -> Lexeme {
         let mut length = 1;
         length += self.consume(|c| c != &'"');
         self.chars.next().unwrap(); // consume closing quote
         length += 1; // include closing quote
-        return Token::new(
-            TokenKind::Literal(Literal::String),
+        return Lexeme::new(
+            LexemeKind::StringLiteral,
             self.next_index(length),
             length,
         );
     }
 
-    fn character(&mut self) -> Token {
+    fn character(&mut self) -> Lexeme {
         let length = self.consume(|c| c != &'\'');
-        return Token::new(
-            TokenKind::Literal(Literal::Char),
+        return Lexeme::new(
+            LexemeKind::CharLiteral,
             self.next_index(length),
             length,
         );
     }
 
-    fn symbol(&mut self, c: char) -> Token {
-        let mut length = 1;
-        let _c3 = self.peek_second();
-        let _c2 = self.peek_first();
-        if let Some(s) = Symbol::match_symbol(&[c]) {
-            if let Some(c2) = _c2 {
-                if let Some(s2) = Symbol::match_symbol(&[c, c2]) {
-                    length += 1;
-                    if let Some(c3) = _c3 {
-                        if let Some(s3) = Symbol::match_symbol(&[c, c2, c3]) {
-                            length += 1;
-                            self.chars.next();
-                            self.chars.next();
-                            return Token::new(
-                                TokenKind::Symbol(s3),
-                                self.next_index(length),
-                                length,
-                            );
-                        }
-                    }
-                    self.chars.next();
-                    return Token::new(TokenKind::Symbol(s2), self.next_index(length), length);
-                }
-            }
-            return Token::new(TokenKind::Symbol(s), self.next_index(length), length);
-        }
-        return Token::new(TokenKind::UNKNOWN, self.next_index(length), length);
+    fn symbol(&mut self, c: char) -> Lexeme {
+        let length = 1;
+        let kind = match c {
+            '!' => LexemeKind::Exclamation,
+            '"' => LexemeKind::Quotation,
+            '#' => LexemeKind::Number,
+            '$' => LexemeKind::Dollar,
+            '%' => LexemeKind::Percent,
+            '&' => LexemeKind::Ampersand,
+            '\'' => LexemeKind::Apostrophe,
+            '(' => LexemeKind::LParen,
+            ')' => LexemeKind::RParen,
+            '*' => LexemeKind::Asterisk,
+            '+' => LexemeKind::Plus,
+            ',' => LexemeKind::Comma,
+            '-' => LexemeKind::Hyphen,
+            '.' => LexemeKind::Dot,
+            '/' => LexemeKind::Slash,
+            ':' => LexemeKind::Colon,
+            ';' => LexemeKind::Semicolon,
+            '<' => LexemeKind::Lesser,
+            '=' => LexemeKind::Equal,
+            '>' => LexemeKind::Greater,
+            '?' => LexemeKind::Question,
+            '@' => LexemeKind::At,
+            '[' => LexemeKind::LSquare,
+            '\\' => LexemeKind::Backslash,
+            ']' => LexemeKind::RSquare,
+            '^' => LexemeKind::Caret,
+            '_' => LexemeKind::Underscore,
+            '`' => LexemeKind::Accent,
+            '{' => LexemeKind::LCurly,
+            '|' => LexemeKind::Pipe,
+            '}' => LexemeKind::RCurly,
+            '~' => LexemeKind::Tilde,
+            _ => LexemeKind::UNKNOWN,
+        };
+        return Lexeme::new(kind, self.next_index(length), length);
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Token;
+impl<'a> Iterator for Scanner<'a> {
+    type Item = Lexeme;
 
     fn next(&mut self) -> Option<Self::Item> {
         let first = match self.chars.next() {
@@ -224,8 +222,8 @@ impl<'a> Iterator for Tokenizer<'a> {
             // comments, or slash
             '/' => match self.peek_first() {
                 Some('/') => Some(self.comment()),
-                _ => Some(Token::new(
-                    TokenKind::Symbol(Symbol::Slash),
+                _ => Some(Lexeme::new(
+                    LexemeKind::Slash,
                     self.next_index(1),
                     1,
                 )),
@@ -245,7 +243,7 @@ impl<'a> Iterator for Tokenizer<'a> {
 
             c if c.is_ascii_punctuation() => Some(self.symbol(c)),
 
-            _ => Some(Token::new(TokenKind::UNKNOWN, self.next_index(1), 1)),
+            _ => Some(Lexeme::new(LexemeKind::UNKNOWN, self.next_index(1), 1)),
         };
     }
 }

@@ -7,7 +7,7 @@ A better form of macros.
 
 Directives that come baked into the bootstrapper.
 
-- `#run` : Executes the following code like a script.
+- `#run` : Executes the following code like a script. Just-In-Time (JIT) compiled.
 - `#use` : Pulls in a another module.
 - `#define` : Define a directive from the following code.
 
@@ -16,6 +16,6 @@ Directives that come baked into the bootstrapper.
 Directives that come default with the language.
 
 - `#test` : Executes the following code and reports a success or error status.
-- `#build` : Create an executable from the following code.
+- `#build` : Create an executable from the following code. Ahead-Of-Time (AOT) compiled.
 - `#import` : Pull in another source.
 - `#[attribute1, attribute2]` : Declare a list of attributes for the following code.
