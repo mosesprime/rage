@@ -3,5 +3,5 @@
 */
 
 main() {
-    println!("Hi mom!")
+    println("Hi mom!")
 }

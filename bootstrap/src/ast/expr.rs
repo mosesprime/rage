@@ -1,27 +1,49 @@
 //! Rage Bootstrap
 //! Expressions
 
-use crate::symbol::SymbolIndex;
+use crate::symbol::{SymbolIndex, Symbol};
 
 pub type ExprIndex = usize;
 
-pub enum Expression {
-    OperatorExpr(OperatorExpr),
-    LiteralExpr(LiteralExpr),
+pub enum SExpr {
+    Expr(ExprIndex),
+    Symbol(SymbolIndex),
 }
 
-pub enum OperatorExpr {
-    Plus { lhs: ExprIndex, rhs: ExprIndex },
-    Minus { lhs: ExprIndex, rhs: ExprIndex }, 
+pub enum Expression<'a> {
+    Operator(OperatorExpr<'a>),
+    Literal(LiteralExpr<'a>),
+    Function(FunctionExpr<'a>),
+    Return(ReturnExpr),
+    Block(BlockExpr<'a>),
+    UNKNOWN,
 }
 
-pub enum LiteralExpr {
-    Numeric(SymbolIndex),
+pub enum OperatorExpr<'a> {
+    Plus { lhs: &'a Expression<'a>, rhs: &'a Expression<'a> },
+    Minus { lhs: &'a Expression<'a>, rhs: &'a Expression<'a> }, 
+    Equal { lhs: &'a Expression<'a>, rhs: &'a Expression<'a> },
 }
 
-pub struct ExpressionStore {
+pub enum LiteralExpr<'a> {
+    Numeric(&'a Symbol<'a>),
+}
+
+pub struct FunctionExpr<'a> {
+    is_public: bool,
+    label: &'a str,
+    //generics: &'a [ExprIndex],
+    block: &'a BlockExpr<'a>,
+    output: Option<&'a ReturnExpr>,
+}
+
+pub struct ReturnExpr {}
+
+pub struct BlockExpr<'a> (&'a [Expression<'a>]);
+
+pub struct ExpressionStore<'a> {
     next_index: ExprIndex,
-    expressions: Vec<Expression>,
+    expressions: Vec<Expression<'a>>,
     // PERF: attempt better memory packing?
 }
 
@@ -49,4 +71,3 @@ impl ExpressionStore {
         self.expressions.append(&mut other.expressions);
     }
 }
-

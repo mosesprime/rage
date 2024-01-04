@@ -4,13 +4,13 @@ pub type SymbolIndex = usize;
 
 #[derive(Debug)]
 pub enum SymbolKind {
-    // TODO: add symbol kinds
-    TEST,
+    Identifier,
+    FnDecl
 }
 
 #[derive(Debug)]
 pub struct Symbol<'a> {
-    name: &'a str,
+    label: &'a str,
     kind: &'a SymbolKind,
     size: u16,
     width: u16,
@@ -38,15 +38,12 @@ impl<'a> SymbolStore<'a> {
     pub fn get_symbol(&self, index: SymbolIndex) -> Option<&Symbol> {
         self.symbols.get(index)
     }
+}
 
-    /// Append other [SymbolStore] to self.
-    /// # Returns
-    /// The offset of indicies caused by the merge.
-    pub fn merge(&mut self, mut other: SymbolStore<'a>) -> usize {
-        // PERF: does append impact perf?
-        let i = self.next_index;
-        self.next_index += other.next_index;
-        self.symbols.append(&mut other.symbols);
-        return i;
-    }
+trait SymbolTy {
+    fn hello () -> usize;
+}
+
+struct SymStr{
+    a: Vec<S>,
 }
