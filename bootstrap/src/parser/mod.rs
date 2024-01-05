@@ -3,7 +3,7 @@
 
 use crate::{symbol::{SymbolStore, SymbolKind}, ast::expr::ExpressionStore};
 
-use self::{scanner::Scanner, lexeme::LexemeKind};
+use self::{scanner::Scanner, lexeme::{LexemeKind, Lexeme}};
 
 pub mod lexeme;
 pub mod scanner;
@@ -13,7 +13,7 @@ pub struct Parser<'a> {
     source: &'a str,
     scanner: Scanner<'a>,
     symbols: SymbolStore<'a>,
-    expressions: ExpressionStore,
+    expressions: ExpressionStore<'a>,
     errors: Vec<anyhow::Error>,
 }
 
@@ -50,10 +50,11 @@ impl<'a> Parser<'a> {
         self.source.lines().nth(line_num)
     }
 
-    pub fn run(&mut self) {
-        while let Some(lexeme) = self.scanner.next() {
+    pub fn run( self) -> Vec<Lexeme> {
+        /*while let Some(lexeme) = self.scanner.next() {
             let v = self.get_value(lexeme.index as usize, lexeme.length as usize);
-            println!("{lexeme:?} {v:?}");
-        }
+            log::debug!("{lexeme:?} {v:?}");
+        }*/
+        self.scanner.collect()
     }
 }

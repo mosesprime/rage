@@ -6,9 +6,9 @@ use anyhow::{anyhow, Context};
 
 use crate::{interpreter::InstructionTree, symbol::SymbolStore, ModuleIndex, parser::{Parser, scanner::Scanner}};
 
-use self::builder::{Builder, BuildResult};
+use self::driver::{BuildEvent, Driver, BuildTask};
 
-mod builder;
+mod driver;
 
 /// Front end of bootstrapper.
 /// Builds and maintains the [`InstructionTree`].
@@ -72,10 +72,14 @@ impl<'a> Compiler<'a> {
     }
 
     pub async fn run(mut self) -> anyhow::Result<InstructionTree> {
-        for file_path in self.source_files {
-            if let Ok(BuildResult::ReadFile { hash, contents }) = Builder::spawn_and_execute(builder::BuildTask::ReadFile { path: file_path.into() }).await {
-                log::debug!("hash {}", hash);
-                let _ = Builder::spawn_and_execute(builder::BuildTask::Parse { source: contents }).await?;
+        let mut driver = Driver::spawn();
+        for path in self.source_files {
+            driver.assign(BuildTask::ReadFile { path }).unwrap().unwrap();
+            loop {
+                if let Some(Ok(event)) = driver.query() {
+                    log::info!("{event:?}");
+                    break;
+                }
             }
         }
         Ok(InstructionTree)

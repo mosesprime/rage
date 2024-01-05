@@ -47,14 +47,14 @@ pub struct ExpressionStore<'a> {
     // PERF: attempt better memory packing?
 }
 
-impl Default for ExpressionStore {
+impl<'a> Default for ExpressionStore<'a> {
     fn default() -> Self {
         Self { next_index: 0, expressions: Vec::default() }
     }
 }
 
-impl ExpressionStore {
-    pub fn add_expression(&mut self, expr: Expression) -> ExprIndex {
+impl<'a> ExpressionStore<'a> {
+    /*pub fn add_expression(&mut self, expr: Expression) -> ExprIndex {
         let index = self.next_index;
         self.next_index += 1;
         self.expressions.push(expr);
@@ -69,5 +69,5 @@ impl ExpressionStore {
         let i = self.next_index;
         self.next_index += other.next_index;
         self.expressions.append(&mut other.expressions);
-    }
+    }*/
 }

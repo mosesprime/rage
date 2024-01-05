@@ -44,6 +44,3 @@ trait SymbolTy {
     fn hello () -> usize;
 }
 
-struct SymStr{
-    a: Vec<S>,
-}
