@@ -6,8 +6,7 @@ use std::{path::PathBuf, time::SystemTime};
 
 use rage_bootstrap::{compiler::Compiler, interpreter::InstructionTree};
 
-#[async_std::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let mut logger = env_logger::builder();
     #[cfg(debug_assertions)]
     logger.filter_level(log::LevelFilter::Debug).init();
@@ -19,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let root_path: PathBuf = "./examples/".into();
 
     let mut compiler = Compiler::new(root_path)?;
-    let instruction_tree = compiler.run().await?;
+    let instruction_tree = compiler.run()?;
 
     log::info!(
         "compiled in {} seconds",

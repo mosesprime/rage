@@ -71,7 +71,7 @@ impl<'a> Compiler<'a> {
         })
     }
 
-    pub async fn run(mut self) -> anyhow::Result<InstructionTree> {
+    pub fn run(mut self) -> anyhow::Result<InstructionTree> {
         let mut driver = Driver::spawn();
         for path in self.source_files {
             driver.assign(BuildTask::ReadFile { path }).unwrap().unwrap();
