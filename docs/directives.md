@@ -32,6 +32,6 @@ Insert macro into code.
 #define MESSAGE = "Hi Mom!" // same as #define {MESSAGE} = {"Hi Mom!"}
 
 #run {
-    echo MESSAGE // same as 
+    echo MESSAGE // same as println("Hi Mom!")
 }
 ```
