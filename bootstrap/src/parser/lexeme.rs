@@ -39,6 +39,11 @@ pub enum LexemeKind {
     StringLiteral,
     /// 0, 7, 10000
     NumericLiteral,
+    // TODO: add hex & binary literals
+    /// 0x5A
+    // HexLiteral,
+    /// 0b0101_0011
+    //BinaryLiteral,
     /// true, false
     BooleanLiteral,
     /// 'a'

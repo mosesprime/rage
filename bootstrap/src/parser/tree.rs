@@ -8,11 +8,13 @@ pub type ExprIndex = u32;
 pub type SymbolIndex = u32;
 pub type SpanIndex = u32;
 
+#[derive(Debug)]
 pub struct Span {
     start: LexemeIndex,
     end: LexemeIndex,
 }
 
+#[derive(Debug)]
 pub struct ParseTree<'a> {
     attributes: &'a [Attribute],
 
@@ -69,6 +71,7 @@ impl<'a> ParseTree<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Expression<'a> {
     Block(&'a Block<'a>),
     FuncDecl(&'a FuncDecl<'a>),
@@ -76,17 +79,20 @@ pub enum Expression<'a> {
     ModuleDecl(&'a ModuleDecl<'a>),
 }
 
+#[derive(Debug)]
 pub struct ModuleDecl<'a> {
     attributes: &'a [Attribute],
     label: &'a str,
     block: ExprIndex,
 }
 
+#[derive(Debug)]
 pub struct CallExpr<'a> {
     label: &'a str,
     arguments: &'a [SymbolIndex],
 }
 
+#[derive(Debug)]
 pub struct FuncDecl<'a> {
     attributes: &'a [Attribute],
     label: &'a str,
@@ -95,11 +101,13 @@ pub struct FuncDecl<'a> {
     block: ExprIndex,
 }
 
+#[derive(Debug)]
 pub struct Block<'a> {
     span: Span,
     inner_tree: &'a ParseTree<'a>,
 }
 
+#[derive(Debug)]
 pub struct Symbol<'a> {
     label: &'a str,
     kind: SymbolKind,
@@ -107,6 +115,13 @@ pub struct Symbol<'a> {
     width: Option<u32>,
 }
 
+impl<'a> Symbol<'a> {
+    pub fn new(label: &'a str, kind: SymbolKind, size: Option<u32>, width: Option<u32>) -> Self {
+        Self { label, kind, size, width }
+    }
+}
+
+#[derive(Debug)]
 pub enum SymbolKind {
     IntLiteral,
     UIntLiteral,
@@ -115,6 +130,7 @@ pub enum SymbolKind {
     ExprPath,
 }
 
+#[derive(Debug)]
 pub enum Attribute {
     Mutable,
     Public,
