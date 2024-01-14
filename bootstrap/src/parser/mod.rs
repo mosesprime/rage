@@ -1,19 +1,16 @@
 //! Rage Bootstrap
 //! Parser
 
-use crate::{symbol::{SymbolStore, SymbolKind}, ast::expr::ExpressionStore};
-
 use self::{scanner::Scanner, lexeme::{LexemeKind, Lexeme}};
 
 pub mod lexeme;
 pub mod scanner;
+pub mod tree;
 
 /// 
 pub struct Parser<'a> {
     source: &'a str,
     scanner: Scanner<'a>,
-    symbols: SymbolStore<'a>,
-    expressions: ExpressionStore<'a>,
     errors: Vec<anyhow::Error>,
 }
 
@@ -22,8 +19,6 @@ impl<'a> Parser<'a> {
         Self {
             source,
             scanner: Scanner::new(source),
-            symbols: SymbolStore::default(),
-            expressions: ExpressionStore::default(),
             errors: Vec::default(),
         }
     }

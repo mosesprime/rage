@@ -4,7 +4,7 @@ use std::{fs, path::PathBuf, result::Result::Ok, str::FromStr, collections::Hash
 
 use anyhow::{anyhow, Context};
 
-use crate::{interpreter::InstructionTree, symbol::SymbolStore, ModuleIndex, parser::{Parser, scanner::Scanner}};
+use crate::{interpreter::InstructionTree};
 
 use self::driver::{BuildEvent, Driver, BuildTask};
 
@@ -12,14 +12,13 @@ mod driver;
 
 /// Front end of bootstrapper.
 /// Builds and maintains the [`InstructionTree`].
-pub struct Compiler<'a> {
+pub struct Compiler {
     /// Path to the project directory being compiled.
     root_path: PathBuf,
     source_files: Vec<PathBuf>,
-    symbol_store: SymbolStore<'a>,
 }
 
-impl<'a> Compiler<'a> {
+impl Compiler {
     pub fn new(root_path: PathBuf) -> anyhow::Result<Self> {
         if !root_path.is_dir() {
             return Err(anyhow!("root path must be a directory"));
@@ -63,11 +62,9 @@ impl<'a> Compiler<'a> {
                 }
             }
         }
-        let symbol_store = SymbolStore::default();
         Ok(Self {
             root_path,
             source_files,
-            symbol_store,
         })
     }
 
