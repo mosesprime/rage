@@ -1,20 +1,19 @@
 //! Rage Bootstrap
 //! Lexeme
 
-pub type LexemeIndex = u32;
+pub type LexemeIndex = usize;
 
-/// Pre-parsed lexical tokens.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Lexeme {
     pub kind: LexemeKind,
     /// Index of the [char] at the start of the lexeme.
     pub index: LexemeIndex,
     /// Number of [char]s in lexeme.
-    pub length: u16,
+    pub length: usize,
 }
 
 impl Lexeme {
-    pub fn new(kind: LexemeKind, index: LexemeIndex, length: u16) -> Self {
+    pub fn new(kind: LexemeKind, index: LexemeIndex, length: usize) -> Self {
         Self {
             kind,
             index,
@@ -39,11 +38,6 @@ pub enum LexemeKind {
     StringLiteral,
     /// 0, 7, 10000
     NumericLiteral,
-    // TODO: add hex & binary literals
-    /// 0x5A
-    // HexLiteral,
-    /// 0b0101_0011
-    //BinaryLiteral,
     /// true, false
     BooleanLiteral,
     /// 'a'

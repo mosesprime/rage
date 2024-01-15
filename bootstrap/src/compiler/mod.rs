@@ -10,7 +10,6 @@ use self::driver::{BuildEvent, Driver, BuildTask};
 
 mod driver;
 
-/// Front end of bootstrapper.
 /// Builds and maintains the [`InstructionTree`].
 pub struct Compiler {
     /// Path to the project directory being compiled.
@@ -70,13 +69,24 @@ impl Compiler {
 
     pub fn run(mut self) -> anyhow::Result<InstructionTree> {
         let mut driver = Driver::spawn();
-        for path in self.source_files {
+        /*for path in self.source_files {
             driver.assign(BuildTask::ReadFile { path }).unwrap().unwrap();
             loop {
                 if let Some(Ok(event)) = driver.query() {
                     log::info!("{event:?}");
                     break;
                 }
+            }
+        }*/
+        let path = self.root_path.join("demo.rg");
+        let source = std::fs::read_to_string(path)?;
+        driver.assign(BuildTask::Parse { source }).unwrap().unwrap();
+        loop {
+            if let Some(Ok(BuildEvent::Parsed { tokens })) = driver.query() {
+                for token in tokens {
+                    println!("{token:?}");
+                }
+                break;
             }
         }
         Ok(InstructionTree)

@@ -1,15 +1,15 @@
 //! Rage Bootstrap 
 //! Scanner
 
-use std::str::Chars;
+use std::{str::Chars, usize};
 
-use super::lexeme::{Lexeme, LexemeKind};
+use super::lexeme::{Lexeme, LexemeKind, LexemeIndex};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
     chars: Chars<'a>,
     source: &'a str,
-    next_index: u32,
+    next_index: LexemeIndex,
 }
 
 impl<'a> Scanner<'a> {
@@ -21,9 +21,9 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn next_index(&mut self, length: u16) -> u32 {
+    fn next_index(&mut self, length: usize) -> LexemeIndex {
         let i = self.next_index;
-        self.next_index += length as u32;
+        self.next_index += length;
         i
     }
 
@@ -38,8 +38,8 @@ impl<'a> Scanner<'a> {
     }
 
     /// Consumes while the predicate is true. Returns number of [`char`] consumed.
-    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> u16 {
-        let mut len: u16 = 0;
+    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> usize {
+        let mut len = 0;
         let mut peekable = self.chars.clone().peekable();
         while peekable.next_if(&mut predicate).is_some() {
             len += 1;
@@ -118,7 +118,7 @@ impl<'a> Scanner<'a> {
         let index = self.next_index(length);
         let slice = self
             .source
-            .get(index as usize..(index as usize + length as usize))
+            .get(index ..(index + length))
             .unwrap();
         if slice == "true" || slice == "false" {
             return Lexeme::new(LexemeKind::BooleanLiteral, index, length);
@@ -127,15 +127,8 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn number(&mut self, c: char) -> Lexeme {
+    fn number(&mut self) -> Lexeme {
         let mut length = 1;
-        if c == '0' {
-            match self.peek_first() {
-                Some('x') => todo!(),
-                Some('b') => todo!(),
-                _ => {}
-            }
-        }
         length += self.consume(|c| c.is_ascii_digit());
         return Lexeme::new(
             LexemeKind::NumericLiteral,
@@ -233,7 +226,7 @@ impl<'a> Iterator for Scanner<'a> {
             c if c.is_ascii_alphabetic() => Some(self.term()),
 
             // numeric
-            c if c.is_ascii_digit() => Some(self.number(c)),
+            c if c.is_ascii_digit() => Some(self.number()),
 
             // string
             '"' => Some(self.string()),

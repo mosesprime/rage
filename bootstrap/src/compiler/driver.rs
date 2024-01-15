@@ -6,7 +6,7 @@ use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{sel
 use anyhow::{Context, anyhow};
 use blake3::Hash;
 
-use crate::parser::{Parser, tree::ParseTree};
+use crate::{parser::{Parser, tree::ParseTree}, syntax::token::Token};
 
 /// A single compilation unit.
 /// Should spawn one per thread if able.
@@ -100,7 +100,8 @@ pub enum BuildEvent {
     Parsed { 
         // TODO: test if this lifetime causes extra memory use or 
         // if it is correctly coerced into a shorter lifetime
-        parse_tree: ParseTree<'static>
+        //parse_tree: ParseTree<'static>
+        tokens: Vec<Token>,
     },
     SHUTDOWN,
 }
@@ -133,9 +134,9 @@ impl BuildTask {
                 return BuildEvent::ReadFile { hash, contents };
             },
             BuildTask::Parse { source } => {
-                let mut parser = Parser::new(source.as_str());
-                let parse_tree = parser.run().expect("failed to parse");
-                return BuildEvent::Parsed { parse_tree };
+                let mut parser = Parser::new(source.as_str()).run();
+                let parse_tree = ParseTree::default();
+                return BuildEvent::Parsed { tokens: parser };
             },
             BuildTask::SHUTDOWN => unreachable!(),
         }

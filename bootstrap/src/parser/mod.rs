@@ -3,14 +3,16 @@
 
 use std::fmt::Display;
 
-use crate::parser::tree::SymbolKind;
+use crate::{parser::tree::SymbolKind, syntax::token::Token};
 
-use self::{scanner::Scanner, lexeme::{LexemeKind, Lexeme}, tree::{ParseTree, Symbol}};
+use self::{tree::{ParseTree, Symbol}, scanner::Scanner, lexeme::{Lexeme, LexemeKind, LexemeIndex}, syntax::SyntaxAnalyzer};
 
 pub mod lexeme;
 pub mod scanner;
+pub mod syntax;
 pub mod tree;
 
+#[derive(Debug)]
 pub struct ParserError<'a> {
     msg: &'a str,
     index: Option<usize>,
@@ -34,13 +36,13 @@ impl<'a> ParserError<'a> {
     }
 }
 
-/// 
+/// Front-end of the compiler.
+/// Performs lexical analysis, syntax analysis, and semantic analysis on the source code.
 pub struct Parser<'a> {
     source: &'a str,
     scanner: Scanner<'a>,
     errors: Vec<ParserError<'a>>,
     parse_tree: ParseTree<'a>,
-    lookback_buffer: Vec<Lexeme>,
 }
 
 impl<'a> Parser<'a> {
@@ -50,17 +52,16 @@ impl<'a> Parser<'a> {
             scanner: Scanner::new(source),
             errors: Vec::default(),
             parse_tree: ParseTree::default(),
-            lookback_buffer: Vec::default(),
         }
     }
     
     /// Gets a slice of the source if able.
-    fn get_value(&self, index: usize, length: usize) -> Option<&str> {
+    fn get_value(&self, index: LexemeIndex, length: usize) -> Option<&str> {
         self.source.get(index..(index + length))
     }
 
     /// Get the line of source code where the index is located.
-    fn get_line_from_index(&self, index: usize) -> Option<&str> {
+    fn get_line_from_index(&self, index: LexemeIndex) -> Option<&str> {
         self.source.lines().find(|line| {
             let mut indcies = line.char_indices();
             if let Some((n, _)) = indcies.next() {
@@ -76,35 +77,9 @@ impl<'a> Parser<'a> {
         self.source.lines().nth(line_num)
     }
 
-    fn parse_string_literal(&mut self, lexeme: Lexeme) {
-        if let Some(value) = self.get_value(lexeme.index as usize, lexeme.length as usize) {
-            self.parse_tree.add_symbol(Symbol::new(value, SymbolKind::StringLiteral, Some(value.len() as u32), Some(1)));
-        } else {
-            self.errors.push(ParserError::new("unable to read value", Some(lexeme.index as usize), None));
-        }
-    }
-
-    pub fn run(mut self) -> Result<ParseTree<'a>, Vec<ParserError<'a>>> {
-        let mut lexemes = self.scanner.peekable();
-        while let Some(lexeme) = lexemes.next() {
-            match lexeme.kind {
-                LexemeKind::Space => {},
-                LexemeKind::NewLine => {},
-                LexemeKind::LineComment => {},
-                LexemeKind::BlockComment => {},
-                LexemeKind::Documentation => {},
-                LexemeKind::StringLiteral => {
-                    self.parse_string_literal(lexeme);
-                },
-                LexemeKind::NumericLiteral => {
-                    let first = lexemes.pee
-                },
-            }
-        };
-        if self.errors.len() > 0 {
-            return Err(self.errors);
-        } else {
-            return Ok(self.parse_tree);
-        }
+    pub fn run(mut self) -> Vec<Token> {
+        let mut syntax_analyzer = SyntaxAnalyzer::new(self.scanner);
+        let token_iter = syntax_analyzer.run();
+        token_iter
     }
 }
