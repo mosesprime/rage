@@ -6,7 +6,7 @@ use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{sel
 use anyhow::{Context, anyhow};
 use blake3::Hash;
 
-use crate::{parser::{Parser, tree::ParseTree}, syntax::token::Token};
+use crate::{parser::{Parser}, syntax::token::Token};
 
 /// A single compilation unit.
 /// Should spawn one per thread if able.
@@ -135,7 +135,7 @@ impl BuildTask {
             },
             BuildTask::Parse { source } => {
                 let mut parser = Parser::new(source.as_str()).run();
-                let parse_tree = ParseTree::default();
+                //let parse_tree = ParseTree::default();
                 return BuildEvent::Parsed { tokens: parser };
             },
             BuildTask::SHUTDOWN => unreachable!(),

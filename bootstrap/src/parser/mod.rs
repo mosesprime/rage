@@ -3,9 +3,9 @@
 
 use std::fmt::Display;
 
-use crate::{parser::tree::SymbolKind, syntax::token::Token};
+use crate::{syntax::token::Token};
 
-use self::{tree::{ParseTree, Symbol}, scanner::Scanner, lexeme::{Lexeme, LexemeKind, LexemeIndex}, syntax::SyntaxAnalyzer};
+use self::{scanner::Scanner, lexeme::{ LexemeIndex}, syntax::SyntaxAnalyzer};
 
 pub mod lexeme;
 pub mod scanner;
@@ -42,7 +42,6 @@ pub struct Parser<'a> {
     source: &'a str,
     scanner: Scanner<'a>,
     errors: Vec<ParserError<'a>>,
-    parse_tree: ParseTree<'a>,
 }
 
 impl<'a> Parser<'a> {
@@ -51,7 +50,6 @@ impl<'a> Parser<'a> {
             source,
             scanner: Scanner::new(source),
             errors: Vec::default(),
-            parse_tree: ParseTree::default(),
         }
     }
     
