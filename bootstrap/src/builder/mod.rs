@@ -11,13 +11,13 @@ use self::driver::{BuildEvent, Driver, BuildTask};
 mod driver;
 
 /// Builds and maintains the [`InstructionTree`].
-pub struct Compiler {
+pub struct Builder {
     /// Path to the project directory being compiled.
     root_path: PathBuf,
     source_files: Vec<PathBuf>,
 }
 
-impl Compiler {
+impl Builder {
     pub fn new(root_path: PathBuf) -> anyhow::Result<Self> {
         if !root_path.is_dir() {
             return Err(anyhow!("root path must be a directory"));

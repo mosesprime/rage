@@ -1,6 +1,6 @@
 //! Rage Bootstrap
 
-pub mod compiler;
+pub mod builder;
 pub mod parser;
 pub mod interpreter;
 pub mod syntax;

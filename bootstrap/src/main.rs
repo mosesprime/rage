@@ -4,7 +4,7 @@
 
 use std::{path::PathBuf, time::SystemTime};
 
-use rage_bootstrap::{compiler::Compiler, interpreter::InstructionTree};
+use rage_bootstrap::builder::Builder;
 
 fn main() -> anyhow::Result<()> {
     let mut logger = env_logger::builder();
@@ -17,8 +17,8 @@ fn main() -> anyhow::Result<()> {
 
     let root_path: PathBuf = "./examples/".into();
 
-    let mut compiler = Compiler::new(root_path)?;
-    let instruction_tree = compiler.run()?;
+    let mut builder = Builder::new(root_path)?;
+    let instruction_tree = builder.run()?;
 
     log::info!(
         "compiled in {} seconds",
