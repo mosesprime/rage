@@ -1,30 +1,22 @@
 //! Rage Bootstrap 
 //! Scanner
 
-use std::{str::Chars, usize};
+use std::str::Chars;
 
-use super::lexeme::{Lexeme, LexemeKind, LexemeIndex};
+use crate::syntax::token::{Comment, Literal};
+
+use super::lexeme::{Lexeme, LexemeKind, Whitespace};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
     chars: Chars<'a>,
-    source: &'a str,
-    next_index: LexemeIndex,
 }
 
 impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
             chars: source.chars(),
-            source,
-            next_index: 0,
         }
-    }
-
-    fn next_index(&mut self, length: usize) -> LexemeIndex {
-        let i = self.next_index;
-        self.next_index += length;
-        i
     }
 
     fn peek_first(&mut self) -> Option<char> {
@@ -38,7 +30,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// Consumes while the predicate is true. Returns number of [`char`] consumed.
-    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> usize {
+    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> u32 {
         let mut len = 0;
         let mut peekable = self.chars.clone().peekable();
         while peekable.next_if(&mut predicate).is_some() {
@@ -51,20 +43,15 @@ impl<'a> Scanner<'a> {
     /// Handle ASCII whitespace.
     fn whitespace(&mut self, c: char) -> Lexeme {
         let mut length = 1;
-        if c == '\n' {
-            length += self.consume(|c| c == &'\n');
-            return Lexeme::new(
-                LexemeKind::NewLine,
-                self.next_index(length),
-                length,
-            );
-        } else {
-            length += self.consume(|c| c.is_ascii_whitespace() && c != &'\n');
-            return Lexeme::new(
-                LexemeKind::Space,
-                self.next_index(length),
-                length,
-            );
+        match c {
+            '\n' => {
+                length += self.consume(|c| c == &'\n');
+                return Lexeme::new(LexemeKind::Whitespace(Whitespace::NewLine), length);
+            },
+            _ => {
+                length += self.consume(|c| c.is_ascii_whitespace() && c != &'\n');
+                return Lexeme::new(LexemeKind::Whitespace(Whitespace::Blank), length)
+            }
         }
     }
 
@@ -86,27 +73,15 @@ impl<'a> Scanner<'a> {
                         break;
                     }
                 }
-                return Lexeme::new(
-                    LexemeKind::BlockComment,
-                    self.next_index(length),
-                    length,
-                );
+                return Lexeme::new(LexemeKind::Comment(Comment::Block), length);
             }
             Some('/') => {
                 length += self.consume(|c| c != &'\n');
-                return Lexeme::new(
-                    LexemeKind::Documentation,
-                    self.next_index(length),
-                    length,
-                );
+                return Lexeme::new(LexemeKind::Comment(Comment::Documentation), length);
             }
             _ => {
                 length += self.consume(|c| c != &'\n');
-                return Lexeme::new(
-                    LexemeKind::LineComment,
-                    self.next_index(length),
-                    length,
-                );
+                return Lexeme::new(LexemeKind::Comment(Comment::Line), length);
             }
         }
     }
@@ -115,26 +90,14 @@ impl<'a> Scanner<'a> {
     fn term(&mut self) -> Lexeme {
         let mut length = 1;
         length += self.consume(|c| c.is_ascii_alphanumeric() || c == &'_');
-        let index = self.next_index(length);
-        let slice = self
-            .source
-            .get(index ..(index + length))
-            .unwrap();
-        if slice == "true" || slice == "false" {
-            return Lexeme::new(LexemeKind::BooleanLiteral, index, length);
-        } else {
-            return Lexeme::new(LexemeKind::Identifier, index, length);
-        }
+        return Lexeme::new(LexemeKind::Term, length);
     }
 
     fn number(&mut self) -> Lexeme {
         let mut length = 1;
         length += self.consume(|c| c.is_ascii_digit());
-        return Lexeme::new(
-            LexemeKind::NumericLiteral,
-            self.next_index(length),
-            length,
-        );
+        // TODO: add other number literal kinds
+        return Lexeme::new(LexemeKind::Literal(Literal::Integer), length);
     }
 
     fn string(&mut self) -> Lexeme {
@@ -142,20 +105,12 @@ impl<'a> Scanner<'a> {
         length += self.consume(|c| c != &'"');
         self.chars.next().unwrap(); // consume closing quote
         length += 1; // include closing quote
-        return Lexeme::new(
-            LexemeKind::StringLiteral,
-            self.next_index(length),
-            length,
-        );
+        return Lexeme::new(LexemeKind::Literal(Literal::String), length);
     }
 
     fn character(&mut self) -> Lexeme {
         let length = self.consume(|c| c != &'\'');
-        return Lexeme::new(
-            LexemeKind::CharLiteral,
-            self.next_index(length),
-            length,
-        );
+        return Lexeme::new(LexemeKind::Literal(Literal::Char), length);
     }
 
     fn symbol(&mut self, c: char) -> Lexeme {
@@ -195,7 +150,7 @@ impl<'a> Scanner<'a> {
             '~' => LexemeKind::Tilde,
             _ => LexemeKind::UNKNOWN,
         };
-        return Lexeme::new(kind, self.next_index(length), length);
+        return Lexeme::new(kind, length);
     }
 }
 
@@ -215,11 +170,7 @@ impl<'a> Iterator for Scanner<'a> {
             // comments, or slash
             '/' => match self.peek_first() {
                 Some('/') => Some(self.comment()),
-                _ => Some(Lexeme::new(
-                    LexemeKind::Slash,
-                    self.next_index(1),
-                    1,
-                )),
+                _ => Some(Lexeme::new(LexemeKind::Slash, 1)),
             },
 
             // alphabetic
@@ -236,7 +187,7 @@ impl<'a> Iterator for Scanner<'a> {
 
             c if c.is_ascii_punctuation() => Some(self.symbol(c)),
 
-            _ => Some(Lexeme::new(LexemeKind::UNKNOWN, self.next_index(1), 1)),
+            _ => Some(Lexeme::new(LexemeKind::UNKNOWN, 1)),
         };
     }
 }

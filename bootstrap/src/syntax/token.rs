@@ -1,28 +1,17 @@
 //! Rage Bootstrap
 //! Syntax Token
 
-use crate::parser::lexeme::LexemeIndex;
-
 #[derive(Debug, Clone)]
 pub struct Token {
     kind: TokenKind,
-    span: Option<TokenSpan>,
+    index: u32,
+    length: u32,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, span: Option<(usize, usize)>) -> Self {
-        let span = match span {
-            Some((start, end)) => Some(TokenSpan { start, end }),
-            None => None,
-        };
-        Self { kind, span }
+    pub fn new(kind: TokenKind, index: u32, length: u32) -> Self {
+        Self { kind, index, length }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct TokenSpan {
-    pub start: LexemeIndex,
-    pub end: LexemeIndex,
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +134,7 @@ pub enum Delimiter {
     Seperator,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Bool,
     Char,
@@ -165,7 +154,7 @@ pub enum Macro {
     Repeat,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Comment {
     Line,
     Block,

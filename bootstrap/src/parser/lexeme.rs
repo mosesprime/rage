@@ -1,49 +1,37 @@
 //! Rage Bootstrap
 //! Lexeme
 
-pub type LexemeIndex = usize;
+use crate::syntax::token::{Comment, Literal};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Lexeme {
     pub kind: LexemeKind,
-    /// Index of the [char] at the start of the lexeme.
-    pub index: LexemeIndex,
     /// Number of [char]s in lexeme.
-    pub length: usize,
+    pub length: u32,
 }
 
 impl Lexeme {
-    pub fn new(kind: LexemeKind, index: LexemeIndex, length: usize) -> Self {
+    pub fn new(kind: LexemeKind, length: u32) -> Self {
         Self {
             kind,
-            index,
             length,
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum LexemeKind {
-    /// ' '
-    Space,
-    /// \n
+pub enum Whitespace {
+    Blank,
     NewLine,
-    /// Inline comment ie '//'
-    LineComment,
-    /// Mulitline comment ie '//* */'
-    BlockComment,
-    /// Documentation comment ie '///'
-    Documentation,
-    /// "the quick brown fox jumps over the jazy dog"
-    StringLiteral,
-    /// 0, 7, 10000
-    NumericLiteral,
-    /// true, false
-    BooleanLiteral,
-    /// 'a'
-    CharLiteral,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum LexemeKind {
+    Whitespace(Whitespace),
+    Comment(Comment),
+    Literal(Literal),
     /// my_variable, MyColor
-    Identifier,
+    Term,
     /// !
     Exclamation,
     /// "

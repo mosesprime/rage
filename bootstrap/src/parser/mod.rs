@@ -5,11 +5,10 @@ use std::fmt::Display;
 
 use crate::{syntax::token::Token};
 
-use self::{scanner::Scanner, lexeme::{ LexemeIndex}, syntax::SyntaxAnalyzer};
+use self::scanner::Scanner;
 
 pub mod lexeme;
 pub mod scanner;
-pub mod syntax;
 pub mod tree;
 
 #[derive(Debug)]
@@ -54,12 +53,12 @@ impl<'a> Parser<'a> {
     }
     
     /// Gets a slice of the source if able.
-    fn get_value(&self, index: LexemeIndex, length: usize) -> Option<&str> {
+    fn get_value(&self, index: usize, length: usize) -> Option<&str> {
         self.source.get(index..(index + length))
     }
 
     /// Get the line of source code where the index is located.
-    fn get_line_from_index(&self, index: LexemeIndex) -> Option<&str> {
+    fn get_line_from_index(&self, index: usize) -> Option<&str> {
         self.source.lines().find(|line| {
             let mut indcies = line.char_indices();
             if let Some((n, _)) = indcies.next() {
@@ -76,8 +75,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn run(mut self) -> Vec<Token> {
-        let mut syntax_analyzer = SyntaxAnalyzer::new(self.scanner);
-        let token_iter = syntax_analyzer.run();
-        token_iter
+        todo!()
     }
 }

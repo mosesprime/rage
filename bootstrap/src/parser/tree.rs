@@ -1,12 +1,10 @@
 //! Rage Bootstrap
 //! Parse Tree
 
-use super::lexeme::LexemeIndex;
-
 #[derive(Debug)]
 pub struct Range {
-    pub start: LexemeIndex,
-    pub end: LexemeIndex,
+    pub start: u32,
+    pub end: u32,
 }
 
 pub type Label<'a> = &'a str;
