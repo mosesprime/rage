@@ -5,7 +5,7 @@ use std::fmt::Display;
 
 use crate::{syntax::token::Token};
 
-use self::scanner::Scanner;
+use self::{scanner::Scanner, lexeme::Lexeme};
 
 pub mod lexeme;
 pub mod scanner;
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
         self.source.lines().nth(line_num)
     }
 
-    pub fn run(mut self) -> Vec<Token> {
-        todo!()
+    pub fn run(mut self) -> Vec<Lexeme> {
+        self.scanner.collect()
     }
 }

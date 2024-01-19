@@ -1,93 +1,55 @@
 //! Rage Bootstrap Compiler
 
-use std::{fs, path::PathBuf, result::Result::Ok, str::FromStr, collections::HashMap};
+use std::{fs, path::PathBuf, result::Result::Ok, sync::mpsc::Receiver};
 
 use anyhow::{anyhow, Context};
 
 use crate::{interpreter::InstructionTree};
 
-use self::driver::{BuildEvent, Driver, BuildTask};
+use self::driver::{BuildResult, Driver, BuildTask, JobHandler};
 
 mod driver;
+pub mod source;
 
 /// Builds and maintains the [`InstructionTree`].
 pub struct Builder {
-    /// Path to the project directory being compiled.
-    root_path: PathBuf,
-    source_files: Vec<PathBuf>,
+    /// Path to the file being compiled.
+    path: PathBuf,
+    num_cpus: usize,
+    job_handler: JobHandler,
+    drivers: Vec<Driver>,
+    sources: Vec<PathBuf>,
 }
 
 impl Builder {
-    pub fn new(root_path: PathBuf) -> anyhow::Result<Self> {
-        if !root_path.is_dir() {
-            return Err(anyhow!("root path must be a directory"));
+    pub fn new(path: PathBuf, num_cpus: usize) -> anyhow::Result<Self> {
+        if !path.is_file() {
+            return Err(anyhow!("path must point to a file"));
         }
-        // turn root path into a list of source files
-        let mut source_files: Vec<PathBuf> = vec![];
-        let mut unexplored_dirs: Vec<PathBuf> = vec![];
-        unexplored_dirs.push(root_path.clone());
-        while let Some(dir_path) = unexplored_dirs.pop() {
-            for entry in dir_path.read_dir().context("failed to read directory")? {
-                match entry {
-                    Ok(entry) => {
-                        let path = entry.path();
-                        if path.is_file() {
-                            if let Some(ext) = path.extension() {
-                                if ext == "rg" {
-                                    log::debug!("adding file {}", path.display());
-                                    source_files.push(path);
-                                } else {
-                                    log::debug!("ignoring file {}", path.display());
-                                }
-                            } else {
-                                log::debug!("no extension for {}", path.display());
-                            }
-                        } else if path.is_dir() {
-                            if let Some(path_str) = path.to_str() {
-                                if path_str.contains("/.") {
-                                    log::debug!("ignoring directory {}", path.display());
-                                } else {
-                                    log::debug!("searching directory {}", path.display());
-                                    unexplored_dirs.push(path);
-                                }
-                            } else {
-                                unimplemented!();
-                            }
-                        } else {
-                            return Err(anyhow!("unexpected file type {}", path.display()));
-                        }
-                    }
-                    Err(e) => return Err(anyhow!(e)),
-                }
-            }
+        let job_handler = JobHandler::default();
+        let mut drivers = Vec::with_capacity(num_cpus);
+        for _ in 0..num_cpus {
+            drivers.push(Driver::spawn(&job_handler));
         }
         Ok(Self {
-            root_path,
-            source_files,
+            path: path.clone(),
+            num_cpus,
+            job_handler,
+            drivers,
+            sources: vec![path],
         })
     }
 
     pub fn run(mut self) -> anyhow::Result<InstructionTree> {
-        let mut driver = Driver::spawn();
-        /*for path in self.source_files {
-            driver.assign(BuildTask::ReadFile { path }).unwrap().unwrap();
-            loop {
-                if let Some(Ok(event)) = driver.query() {
-                    log::info!("{event:?}");
-                    break;
-                }
+        // TODO: replace test driver with real drivers
+        let source = std::fs::read_to_string(self.path)?;
+        if let BuildResult::Parsed { lexemes } = self.job_handler.push_priority(BuildTask::Parse { source }) {
+            for lexeme in lexemes {
+                println!("{lexeme:?}");
             }
-        }*/
-        let path = self.root_path.join("demo.rg");
-        let source = std::fs::read_to_string(path)?;
-        driver.assign(BuildTask::Parse { source }).unwrap().unwrap();
-        loop {
-            if let Some(Ok(BuildEvent::Parsed { tokens })) = driver.query() {
-                for token in tokens {
-                    println!("{token:?}");
-                }
-                break;
-            }
+        }
+        for mut driver in self.drivers {
+            driver.shutdown()
         }
         Ok(InstructionTree)
     }

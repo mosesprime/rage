@@ -4,6 +4,7 @@
 
 use std::{path::PathBuf, time::SystemTime};
 
+use anyhow::Context;
 use rage_bootstrap::builder::Builder;
 
 fn main() -> anyhow::Result<()> {
@@ -15,9 +16,10 @@ fn main() -> anyhow::Result<()> {
 
     let start_time = SystemTime::now();
 
-    let root_path: PathBuf = "./examples/".into();
+    let root_path: PathBuf = "./examples/demo.rg".into();
 
-    let mut builder = Builder::new(root_path)?;
+    let num_cpus = std::thread::available_parallelism().context("unable to get number of available threads")?;
+    let mut builder = Builder::new(root_path, num_cpus.into())?;
     let instruction_tree = builder.run()?;
 
     log::info!(

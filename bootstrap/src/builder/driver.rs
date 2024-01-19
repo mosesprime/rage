@@ -1,96 +1,49 @@
 //! Rage Bootstrap
 //! Compiler Builder
 
-use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{self, Sender, Receiver, SyncSender}, Arc, Mutex}, path::PathBuf, time::Duration};
+use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{self, Sender, Receiver, SyncSender}, Arc, Mutex}, path::PathBuf, time::Duration, collections::{VecDeque, HashMap}, ops::DerefMut};
 
-use anyhow::{Context, anyhow};
 use blake3::Hash;
 
-use crate::{parser::{Parser}, syntax::token::Token};
+use crate::{parser::{Parser, lexeme::Lexeme}, syntax::token::Token};
+
+use super::source::Source;
 
 /// A single compilation unit.
 /// Should spawn one per thread if able.
 pub struct Driver {
-    is_busy: bool,
-    task_tx: SyncSender<BuildTask>,
-    event_rx: Receiver<BuildEvent>,
+    shutdown_tx: Sender<()>,
     handle: JoinHandle<()>,
 }
 
 impl Driver {
     /// Spawn a new [Driver] in its own thread.
-    pub fn spawn() -> Self {
-        let (task_tx, task_rx): (SyncSender<BuildTask>, Receiver<BuildTask>) = mpsc::sync_channel(0);
-        let (event_tx, event_rx) = mpsc::sync_channel(0);
+    pub fn spawn(job_handler: &JobHandler) -> Self {
+        let (shutdown_tx, shutdown_rx) = mpsc::channel();
+        let mut job_queue = job_handler.queue();
         let handle = thread::spawn(move || {
             log::debug!("spinning up driver");
             loop {
-                if let Ok(task) = task_rx.recv() {
-                    if task == BuildTask::SHUTDOWN {
-                        log::debug!("shutting down driver");
-                        break;
-                    }
-                    let res = task.execute();
-                    event_tx.send(res).expect("failed to send build event");
+                if let Ok(_) = shutdown_rx.try_recv() {
+                    log::debug!("shutting down driver");
+                    break;
+                }
+                if let Some((task, sender)) = job_queue.pop_front() {
+                    sender.send(task.execute()).expect("channel closed");
                 }
             }
         });
-        Self { is_busy: false, task_tx, event_rx, handle }
+        Self { shutdown_tx, handle }
     }
 
-    /// Attempts to gracefully shutdown the [Driver].
-    pub fn shutdown(&mut self) -> anyhow::Result<()> {
-        self.task_tx.send(BuildTask::SHUTDOWN)?;
-        match self.event_rx.recv_timeout(Duration::from_secs(1)).context("failed shutdown") {
-            Ok(BuildEvent::SHUTDOWN) => return Ok(()),
-            Ok(_) => return Err(anyhow!("unexpected shutdown response")),
-            Err(e) => return Err(e),
-        }
-    }
-
-    /// Checks if the [Driver] is occupied with a [BuildTask].
-    pub fn is_busy(&self) -> bool {
-        self.is_busy
-    }
-
-    /// Send a [BuildTask] to the [Driver].
-    /// # Return 
-    /// - `Some(Ok(()))` if task was assigned successfully.
-    /// - `Some(anyhow::Error)` if task failed to be sent through channel.
-    /// - `None` if the driver was unable to accept the task.
-    pub fn assign(&mut self, task: BuildTask) -> Option<anyhow::Result<()>> {
-        if self.is_busy {
-            return None;
-        }
-        self.is_busy = true;
-        match self.task_tx.send(task).context("failed to send build task") {
-            Ok(()) => return Some(Ok(())),
-            Err(e) => return Some(Err(e)),
-        }
-    }
-
-    /// Query the [Driver] for a [BuildEvent].
-    /// # Return 
-    /// - `Some(Ok(BuildEvent))` if the assigned [BuildTask] was completed.
-    /// - `Some(anyhow::Error)` if the event channel failed.
-    /// - `None` if the task has not completed yet.
-    pub fn query(&mut self) -> Option<anyhow::Result<BuildEvent>> {
-        match self.event_rx.try_recv() {
-            Ok(event) => {
-                self.is_busy = false;
-                return Some(Ok(event));
-            },
-            Err(e) => match e {
-                mpsc::TryRecvError::Empty => return None,
-                mpsc::TryRecvError::Disconnected => return Some(Err(anyhow!("driver disconnected"))),
-            },
-        }       
+    pub fn shutdown(&mut self) {
+        self.shutdown_tx.send(()).expect("channel closed");
     }
 }
 
 /// Product of a task being executed.
 #[derive(Debug)]
-pub enum BuildEvent {
+pub enum BuildResult {
     ReadMetadata { metadata: Metadata },
     ReadDir { read_dir: ReadDir },
     ReadFile { 
@@ -101,9 +54,9 @@ pub enum BuildEvent {
         // TODO: test if this lifetime causes extra memory use or 
         // if it is correctly coerced into a shorter lifetime
         //parse_tree: ParseTree<'static>
-        tokens: Vec<Token>,
+        lexemes: Vec<Lexeme>,
     },
-    SHUTDOWN,
+    Error(anyhow::Error)
 }
 
 /// Task to be executed.
@@ -117,29 +70,108 @@ pub enum BuildTask {
 }
 
 impl BuildTask {
-    fn execute(self) -> BuildEvent {
+    fn execute(self) -> BuildResult {
         // TODO: add error handling instead of .expect()
         match self {
             BuildTask::ReadMetadata { path } => {
                 let metadata = std::fs::metadata(path).expect("failed to read metadata");
-                return BuildEvent::ReadMetadata { metadata }
+                return BuildResult::ReadMetadata { metadata }
             },
             BuildTask::ReadDir { path } => {
                 let read_dir = std::fs::read_dir(path).expect("failed to read directory");
-                return BuildEvent::ReadDir { read_dir };
+                return BuildResult::ReadDir { read_dir };
             },
             BuildTask::ReadFile { path } => {
                 let contents = std::fs::read_to_string(path).expect("failed to read file");
                 let hash = blake3::hash(contents.as_bytes());
-                return BuildEvent::ReadFile { hash, contents };
+                return BuildResult::ReadFile { hash, contents };
             },
             BuildTask::Parse { source } => {
                 let mut parser = Parser::new(source.as_str()).run();
-                //let parse_tree = ParseTree::default();
-                return BuildEvent::Parsed { tokens: parser };
+                return BuildResult::Parsed { lexemes: parser };
             },
             BuildTask::SHUTDOWN => unreachable!(),
         }
+    }
+}
+
+pub type JobId = usize;
+
+pub struct JobHandler {
+    next_id: JobId,
+    queue: JobQueue,
+    results: HashMap<JobId, Receiver<BuildResult>>,
+}
+
+#[derive(Clone)]
+struct JobQueue(Arc<Mutex<VecDeque<(BuildTask, Sender<BuildResult>)>>>);
+
+impl JobQueue {
+    fn push_back(&mut self, task: BuildTask, sender: Sender<BuildResult>) {
+        let mut inner = self.0.lock().expect("failed to aquire lock");
+        inner.push_back((task, sender));
+    }
+
+    fn push_front(&mut self, task: BuildTask, sender: Sender<BuildResult>) {
+        let mut inner = self.0.lock().expect("failed to aquire lock");
+        inner.push_front((task, sender));
+    }
+
+    fn pop_front(&mut self) -> Option<(BuildTask, Sender<BuildResult>)> {
+        let mut inner = self.0.lock().expect("failed to aquire lock");
+        inner.pop_front()
+    }
+}
+
+impl Default for JobHandler {
+    fn default() -> Self {
+        Self{
+            next_id: 0,
+            queue: JobQueue(Arc::new(Mutex::new(VecDeque::default()))),
+            results: HashMap::default(),
+        }
+    }
+}
+
+impl JobHandler {
+    /// Push task to back of queue.
+    pub fn push_normal(&mut self, task: BuildTask) -> JobId {
+        let (tx, rx) = mpsc::channel();
+        let id = self.next_id;
+        self.next_id += 1;
+        self.queue.push_back(task, tx);
+        self.results.insert(id, rx);
+        id
+    }
+
+    /// Push task to front of queue. Blocks the thread until task is complete.
+    pub fn push_priority(&mut self, task: BuildTask) -> BuildResult {
+        let (tx, rx) = mpsc::channel();
+        self.queue.push_front(task, tx);
+        rx.recv().expect("channel hung up")
+    }
+
+    /// Get a clone of the internal queue.
+    pub fn queue(&self) -> JobQueue {
+        self.queue.clone()
+    }
+
+    /// Query the handler to see if a particular task is complete.
+    pub fn query(&mut self, id: JobId) -> Option<BuildResult> {
+        if let Some(recv) = self.results.get(&id) {
+            if let Ok(res) = recv.try_recv() {
+                self.results.remove(&id);
+                return Some(res);
+            }
+        }
+        None
+    }
+
+    /// Number of pending jobs, both in queue and awaiting results.
+    pub fn pending(&mut self) -> usize {
+        let mut n = self.queue.0.lock().expect("failed to aquire lock").len();
+        n += self.results.len();
+        n
     }
 }
 
