@@ -9,33 +9,21 @@ use super::lexeme::{Lexeme, LexemeKind, Whitespace};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
-    chars: Chars<'a>,
+    chars: std::iter::Peekable<Chars<'a>>,
 }
 
 impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
-            chars: source.chars(),
+            chars: source.chars().peekable(),
         }
-    }
-
-    fn peek_first(&mut self) -> Option<char> {
-        self.chars.clone().next()
-    }
-
-    fn peek_second(&self) -> Option<char> {
-        let mut iter = self.chars.clone();
-        iter.next()?;
-        iter.next()
     }
 
     /// Consumes while the predicate is true. Returns number of [`char`] consumed.
     fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> u32 {
         let mut len = 0;
-        let mut peekable = self.chars.clone().peekable();
-        while peekable.next_if(&mut predicate).is_some() {
+        while self.chars.next_if(&mut predicate).is_some() {
             len += 1;
-            self.chars.next();
         }
         return len;
     }
@@ -58,7 +46,7 @@ impl<'a> Scanner<'a> {
     /// Handle comments.
     fn comment(&mut self) -> Lexeme {
         let mut length = 1;
-        match self.peek_second() {
+        match self.chars.peek() {
             Some('*') => {
                 let mut prev = '_';
                 loop {
@@ -93,16 +81,59 @@ impl<'a> Scanner<'a> {
         return Lexeme::new(LexemeKind::Term, length);
     }
 
-    fn number(&mut self) -> Lexeme {
+    fn number(&mut self, c: char) -> Lexeme {
         let mut length = 1;
-        length += self.consume(|c| c.is_ascii_digit());
-        // TODO: add other number literal kinds
-        return Lexeme::new(LexemeKind::Literal(Literal::Integer), length);
+        let kind = match c {
+            '0' => match self.chars.peek() {
+                Some('x') => { 
+                    self.chars.next();
+                    length += self.consume(|c| c.is_ascii_digit());
+                    Some(Literal::Hex)
+                },
+                Some('b') => {
+                    self.chars.next();
+                    length += self.consume(|c| c.is_ascii_digit());
+                    Some(Literal::Binary)
+                },
+                Some('o') => { 
+                    self.chars.next();
+                    length += self.consume(|c| c.is_ascii_digit());
+                    Some(Literal::Octal)
+                },
+                Some(c) => {
+                    if c.is_ascii_digit() {
+                        length += self.consume(|c| c.is_ascii_digit());
+                    }
+                    None
+                },
+                None => {
+                    Some(Literal::Integer)
+                },
+            },
+            _ => {
+                length += self.consume(|c| c.is_ascii_digit());
+                None
+            },
+        };
+        match kind {
+            Some(k) => { return Lexeme::new(LexemeKind::Literal(k), length); },
+            None => match self.chars.peek() {
+                Some('.') => {
+                    self.chars.next();
+                    length += self.consume(|c| c.is_ascii_digit());
+                    return Lexeme::new(LexemeKind::Literal(Literal::Float), length);
+                },
+                _ => {
+                    return Lexeme::new(LexemeKind::Literal(Literal::Integer), length);
+                },
+            }
+        }
     }
 
     fn string(&mut self) -> Lexeme {
         let mut length = 1;
         length += self.consume(|c| c != &'"');
+        // TODO: remove unwrap
         self.chars.next().unwrap(); // consume closing quote
         length += 1; // include closing quote
         return Lexeme::new(LexemeKind::Literal(Literal::String), length);
@@ -168,8 +199,11 @@ impl<'a> Iterator for Scanner<'a> {
             c if c.is_ascii_whitespace() => Some(self.whitespace(c)),
 
             // comments, or slash
-            '/' => match self.peek_first() {
-                Some('/') => Some(self.comment()),
+            '/' => match self.chars.peek() {
+                Some('/') => {
+                    self.chars.next();
+                    Some(self.comment())
+                },
                 _ => Some(Lexeme::new(LexemeKind::Slash, 1)),
             },
 
@@ -177,7 +211,7 @@ impl<'a> Iterator for Scanner<'a> {
             c if c.is_ascii_alphabetic() => Some(self.term()),
 
             // numeric
-            c if c.is_ascii_digit() => Some(self.number()),
+            c if c.is_ascii_digit() => Some(self.number(c)),
 
             // string
             '"' => Some(self.string()),

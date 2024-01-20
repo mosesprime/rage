@@ -139,6 +139,7 @@ pub enum Literal {
     Bool,
     Char,
     Hex,
+    Octal,
     Binary,
     Integer,
     Float,
