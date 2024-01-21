@@ -1,62 +1,149 @@
 //! Rage Bootstrap
 //! Compiler Builder
 
-use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{self, Sender, Receiver, SyncSender}, Arc, Mutex}, path::PathBuf, time::Duration, collections::{VecDeque, HashMap}, ops::DerefMut};
+use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{self, Sender, Receiver, TryRecvError}, Arc, Mutex}, path::PathBuf, collections::VecDeque};
 
-use blake3::Hash;
+use anyhow::{Context, anyhow};
 
-use crate::{parser::{Parser, lexeme::Lexeme}, syntax::token::Token};
+use crate::parser::{Parser, lexeme::Lexeme, tree::ParseTree};
 
-use super::source::Source;
+use super::source::{SourceRecord};
+
+pub struct DriverPool {
+    queue: VecDeque<BuildTask>,
+    drivers: Vec<Driver>,
+}
+
+impl DriverPool {
+    pub fn new(num_cpus: usize) -> Self {
+        let mut drivers = Vec::with_capacity(num_cpus);
+        for _ in 0..num_cpus {
+            drivers.push(Driver::spawn());
+        }
+        Self { 
+            queue: VecDeque::default(),
+            drivers,
+        }
+    }
+
+    fn assign_to_available(&mut self) {
+        let avail = self.drivers.iter_mut().filter_map(|d| d.is_available().then_some(d));
+        avail.for_each(|d| {
+            if let Some(task) = self.queue.pop_front() {
+                d.assign(task).unwrap();
+            }
+        });
+    }
+
+    pub fn add_task(&mut self, task: BuildTask) {
+        self.queue.push_back(task);
+    }
+
+    pub fn add_priority_task(&mut self, task: BuildTask) {
+        self.queue.push_front(task);
+        self.assign_to_available();
+    }
+
+    pub fn get_events(&mut self) -> Option<BuildEvent> {
+        self.assign_to_available();
+        // TODO: handle error instead of Result -> Option
+        self.drivers.iter_mut().find_map(|d| d.query().ok()?)
+    }
+}
+
+impl Drop for DriverPool {
+    fn drop(&mut self) {
+        self.drivers.iter_mut().for_each(|d| d.shutdown())
+    }
+}
+
+#[derive(Debug)]
+pub enum DriverError {
+    Busy,
+    NoTask,
+    Channel(anyhow::Error),
+    Closed(anyhow::Result<()>),
+}
 
 /// A single compilation unit.
 /// Should spawn one per thread if able.
 pub struct Driver {
-    shutdown_tx: Sender<()>,
+    busy: bool,
+    task_tx: Sender<BuildTask>,
+    event_rx: Receiver<BuildEvent>,
     handle: JoinHandle<()>,
 }
 
 impl Driver {
     /// Spawn a new [Driver] in its own thread.
-    pub fn spawn(job_handler: &JobHandler) -> Self {
-        let (shutdown_tx, shutdown_rx) = mpsc::channel();
-        let mut job_queue = job_handler.queue();
+    pub fn spawn() -> Self {
+        let (task_tx, task_rx): (Sender<BuildTask>, Receiver<BuildTask>) = mpsc::channel();
+        let (event_tx, event_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
             log::debug!("spinning up driver");
             loop {
-                if let Ok(_) = shutdown_rx.try_recv() {
-                    log::debug!("shutting down driver");
-                    break;
-                }
-                if let Some((task, sender)) = job_queue.pop_front() {
-                    sender.send(task.execute()).expect("channel closed");
+                if let Ok(task) = task_rx.try_recv() {
+                    if BuildTask::SHUTDOWN == task {
+                        break;
+                    }
+                    event_tx.send(task.execute()).expect("driver channel failed");
                 }
             }
+            log::debug!("shutting down driver");
         });
-        Self { shutdown_tx, handle }
+        Self { busy: false, task_tx, event_rx, handle }
+    }
+
+    pub fn is_available(&self) -> bool {
+        !self.busy
     }
 
     pub fn shutdown(&mut self) {
-        self.shutdown_tx.send(()).expect("channel closed");
+        self.task_tx.send(BuildTask::SHUTDOWN).expect("driver channel failed");
+    }
+
+    pub fn assign(&mut self, task: BuildTask) -> Result<(), DriverError> {
+        if !self.busy {
+            self.busy = true;
+            match self.task_tx.send(task) {
+                Ok(()) => return Ok(()),
+                Err(e) => return Err(DriverError::Channel(e.into())),
+            }
+        } else {
+            return Err(DriverError::Busy);
+        }
+    }
+
+    pub fn query(&mut self) -> anyhow::Result<Option<BuildEvent>> {
+        if !self.busy {
+            return Ok(None);
+        }
+        match self.event_rx.try_recv() {
+            Ok(event) => {
+                self.busy = false;
+                return Ok(Some(event));
+            },
+            Err(TryRecvError::Empty) => return Ok(None),
+            Err(TryRecvError::Disconnected) => return Err(TryRecvError::Disconnected.into()),
+        }
     }
 }
 
 /// Product of a task being executed.
 #[derive(Debug)]
-pub enum BuildResult {
+pub enum BuildEvent {
     ReadMetadata { metadata: Metadata },
     ReadDir { read_dir: ReadDir },
     ReadFile { 
-        hash: Hash,
-        contents: String,
+        record: SourceRecord,
+        source: String,
     },
     Parsed { 
-        // TODO: test if this lifetime causes extra memory use or 
-        // if it is correctly coerced into a shorter lifetime
-        //parse_tree: ParseTree<'static>
-        lexemes: Vec<Lexeme>,
+        // TODO: better handle parse_tree lifetime
+        parse_tree: ParseTree<'static>,
     },
-    Error(anyhow::Error)
+    // TODO: expand errors
+    Error(anyhow::Error),
 }
 
 /// Task to be executed.
@@ -70,108 +157,38 @@ pub enum BuildTask {
 }
 
 impl BuildTask {
-    fn execute(self) -> BuildResult {
-        // TODO: add error handling instead of .expect()
-        match self {
+    fn execute(self) -> BuildEvent {
+        let error = match self {
             BuildTask::ReadMetadata { path } => {
-                let metadata = std::fs::metadata(path).expect("failed to read metadata");
-                return BuildResult::ReadMetadata { metadata }
+                log::debug!("reading metadata from {}", path.display());
+                match std::fs::metadata(path).context("failed to read metadata") {
+                    Ok(metadata) => return BuildEvent::ReadMetadata { metadata },
+                    Err(e) => e,
+                }
             },
             BuildTask::ReadDir { path } => {
-                let read_dir = std::fs::read_dir(path).expect("failed to read directory");
-                return BuildResult::ReadDir { read_dir };
+                log::debug!("reading directory at {}", path.display());
+                match std::fs::read_dir(path).context("failed to read directory") {
+                    Ok(read_dir) => return BuildEvent::ReadDir { read_dir },
+                    Err(e) => e,
+                }
             },
             BuildTask::ReadFile { path } => {
-                let contents = std::fs::read_to_string(path).expect("failed to read file");
-                let hash = blake3::hash(contents.as_bytes());
-                return BuildResult::ReadFile { hash, contents };
+                log::debug!("reading file at {}", path.display());
+                match std::fs::read_to_string(path.clone()).context("failed to read file") {
+                    Ok(source) => {
+                        let hash = blake3::hash(source.as_bytes());
+                        return BuildEvent::ReadFile { record: SourceRecord::new(path, hash), source };
+                    },
+                    Err(e) => e,
+                }
             },
             BuildTask::Parse { source } => {
-                let mut parser = Parser::new(source.as_str()).run();
-                return BuildResult::Parsed { lexemes: parser };
+                return BuildEvent::Parsed { parse_tree: Parser::new(source).run() };
             },
             BuildTask::SHUTDOWN => unreachable!(),
-        }
-    }
-}
-
-pub type JobId = usize;
-
-pub struct JobHandler {
-    next_id: JobId,
-    queue: JobQueue,
-    results: HashMap<JobId, Receiver<BuildResult>>,
-}
-
-#[derive(Clone)]
-struct JobQueue(Arc<Mutex<VecDeque<(BuildTask, Sender<BuildResult>)>>>);
-
-impl JobQueue {
-    fn push_back(&mut self, task: BuildTask, sender: Sender<BuildResult>) {
-        let mut inner = self.0.lock().expect("failed to aquire lock");
-        inner.push_back((task, sender));
-    }
-
-    fn push_front(&mut self, task: BuildTask, sender: Sender<BuildResult>) {
-        let mut inner = self.0.lock().expect("failed to aquire lock");
-        inner.push_front((task, sender));
-    }
-
-    fn pop_front(&mut self) -> Option<(BuildTask, Sender<BuildResult>)> {
-        let mut inner = self.0.lock().expect("failed to aquire lock");
-        inner.pop_front()
-    }
-}
-
-impl Default for JobHandler {
-    fn default() -> Self {
-        Self{
-            next_id: 0,
-            queue: JobQueue(Arc::new(Mutex::new(VecDeque::default()))),
-            results: HashMap::default(),
-        }
-    }
-}
-
-impl JobHandler {
-    /// Push task to back of queue.
-    pub fn push_normal(&mut self, task: BuildTask) -> JobId {
-        let (tx, rx) = mpsc::channel();
-        let id = self.next_id;
-        self.next_id += 1;
-        self.queue.push_back(task, tx);
-        self.results.insert(id, rx);
-        id
-    }
-
-    /// Push task to front of queue. Blocks the thread until task is complete.
-    pub fn push_priority(&mut self, task: BuildTask) -> BuildResult {
-        let (tx, rx) = mpsc::channel();
-        self.queue.push_front(task, tx);
-        rx.recv().expect("channel hung up")
-    }
-
-    /// Get a clone of the internal queue.
-    pub fn queue(&self) -> JobQueue {
-        self.queue.clone()
-    }
-
-    /// Query the handler to see if a particular task is complete.
-    pub fn query(&mut self, id: JobId) -> Option<BuildResult> {
-        if let Some(recv) = self.results.get(&id) {
-            if let Ok(res) = recv.try_recv() {
-                self.results.remove(&id);
-                return Some(res);
-            }
-        }
-        None
-    }
-
-    /// Number of pending jobs, both in queue and awaiting results.
-    pub fn pending(&mut self) -> usize {
-        let mut n = self.queue.0.lock().expect("failed to aquire lock").len();
-        n += self.results.len();
-        n
+        };
+        return BuildEvent::Error(error);
     }
 }
 

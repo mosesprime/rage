@@ -1,54 +1,37 @@
 //! Rage Bootstrap
 //! Parser
 
-use std::fmt::Display;
+use std::{fmt::{Display, Debug}, collections::VecDeque};
 
-use crate::{syntax::token::Token};
+use crate::syntax::token::{Token, TokenKind};
 
-use self::{scanner::Scanner, lexeme::Lexeme};
+use self::{scanner::Scanner, lexeme::{Lexeme, LexemeKind}, tree::ParseTree};
 
 pub mod lexeme;
 pub mod scanner;
 pub mod tree;
 
-#[derive(Debug)]
-pub struct ParserError<'a> {
-    msg: &'a str,
-    index: Option<usize>,
-    line: Option<&'a str>,
-}
-
-impl<'a> Display for ParserError<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match (self.index, self.line) {
-            (Some(index), Some(line)) => write!(f, "{} : {}\n\t{}\n", self.msg, index, line),
-            (None, Some(line)) => write!(f, "{}\n\t{}\n", self.msg, line),
-            (Some(index),  None) => write!(f, "{} : {}\n", self.msg, index),
-            (None, None) => write!(f, "{}", self.msg),
-        }
-    }
-}
-
-impl<'a> ParserError<'a> {
-    fn new(msg: &'a str, index: Option<usize>, line: Option<&'a str>) -> Self {
-        Self { msg, index, line }
-    }
-}
-
 /// Front-end of the compiler.
 /// Performs lexical analysis, syntax analysis, and semantic analysis on the source code.
 pub struct Parser<'a> {
-    source: &'a str,
-    scanner: Scanner<'a>,
-    errors: Vec<ParserError<'a>>,
+    source: String,
+    tokens: Vec<Token>,
+    parse_tree: ParseTree<'a>,
+}
+
+impl<'a> Debug for Parser<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: change Parser display()
+        write!(f, "work in progress")
+    }
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(source: String) -> Self {
         Self {
             source,
-            scanner: Scanner::new(source),
-            errors: Vec::default(),
+            tokens: Vec::default(),
+            parse_tree: ParseTree { declarations: Vec::default() },
         }
     }
     
@@ -74,7 +57,46 @@ impl<'a> Parser<'a> {
         self.source.lines().nth(line_num)
     }
 
-    pub fn run(mut self) -> Vec<Lexeme> {
-        self.scanner.collect()
+    fn tokenize(&mut self) {
+        let mut cursor = 0;
+        let mut lexemes = Scanner::new(self.source.as_str()).peekable();
+        while let Some(lexeme) = lexemes.next() {
+            match lexeme.kind {
+                LexemeKind::Whitespace(w) => {
+                    cursor += lexeme.length as usize;
+                },
+                LexemeKind::Comment(c) => {
+                    cursor += lexeme.length as usize;
+                },
+                LexemeKind::Literal(l) => {
+                    cursor += lexeme.length as usize;
+                },
+                LexemeKind::Term => {
+                    let peeked = lexemes.peek();
+                    todo!();
+                    /*match peeked.kind {
+                        LexemeKind::Colon => {}, // path
+                        LexemeKind::Dot => {}, // member 
+                        _ => todo!(),
+                    }*/
+                },
+                //
+                LexemeKind::Number => {
+                    if let Some(l2) = lexemes.peek() {
+                        match l2.kind {
+                            LexemeKind::Term => todo!(), // directive
+                            _ => todo!()
+                        }
+                    }
+                },
+                _ => todo!(),
+            }
+        }
+    }
+
+    pub fn run(mut self) -> ParseTree<'a> {
+        // TODO: do parsing
+        log::error!("parser is a work in process");
+        self.parse_tree
     }
 }

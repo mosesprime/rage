@@ -4,8 +4,15 @@ use std::path::PathBuf;
 
 use blake3::Hash;
 
-pub struct Source {
-    pub path: PathBuf,
-    pub hash: Option<Hash>,
-    pub contents: Option<String>,
+#[derive(Debug, PartialEq)]
+pub struct SourceRecord {
+    path: PathBuf,
+    hash: Hash,
 }
+
+impl SourceRecord {
+    pub fn new(path: PathBuf, hash: Hash) -> Self {
+        Self { path, hash }
+    }
+}
+

@@ -1,16 +1,17 @@
 //! Rage Bootstrap
 //! Syntax Token
 
+use crate::parser::lexeme::LexemeKind;
+
 #[derive(Debug, Clone)]
 pub struct Token {
     kind: TokenKind,
-    index: u32,
     length: u32,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, index: u32, length: u32) -> Self {
-        Self { kind, index, length }
+    pub fn new(kind: TokenKind, length: u32) -> Self {
+        Self { kind, length }
     }
 }
 
@@ -31,7 +32,7 @@ pub enum TokenKind {
     /// a.b 
     Member,
 
-    UNKNOWN,
+    UNKNOWN(LexemeKind),
 }
 
 #[derive(Debug, Clone)]

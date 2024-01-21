@@ -9,22 +9,40 @@ pub struct Range {
 
 pub type Label<'a> = &'a str;
 
-/// Abstract Syntax Tree
 #[derive(Debug)]
-pub struct AST<'a> {
-    root: ModuleDecl<'a>,
+pub struct ParseTree<'a> {
+    pub declarations: Vec<Declaration<'a>>,
+    //pub directives: Vec<Directives<'a>>
+}
+
+#[derive(Debug)]
+pub enum Declaration<'a> {
+    LocalDecl(&'a LocalDecl<'a>),
+    TypeDecl(&'a TypeDecl<'a>),
+    ModuleDecl(&'a ModuleDecl<'a>),
+    FuncDecl(&'a FuncDecl<'a>),
 }
 
 #[derive(Debug)]
 pub enum Expression<'a> {
-    FuncDecl(&'a FuncDecl<'a>),
     CallExpr(&'a CallExpr<'a>),
-    ModuleDecl(&'a ModuleDecl<'a>),
-    TypeDecl(&'a TypeDecl<'a>),
-    LocalDecl(&'a LocalDecl<'a>),
+    ReturnExpr(&'a ReturnExpr<'a>),
+    TupleExpr(&'a TupleExpr<'a>),
 
-    Symbol,
+    Symbol(Label<'a>),
     UNKNOWN,
+}
+
+#[derive(Debug)]
+pub struct TupleExpr<'a> {
+    range: Range,
+    inners: &'a [Expression<'a>]
+}
+
+#[derive(Debug)]
+pub struct ReturnExpr<'a> {
+    range: Range,
+    expr: &'a Expression<'a>,
 }
 
 #[derive(Debug)]
@@ -32,7 +50,7 @@ pub struct LocalDecl<'a> {
     attributes: &'a [Attribute],
     range: Range,
     label: Label<'a>,
-    // expr
+    rhs: &'a Expression<'a>,
 }
 
 #[derive(Debug)]
@@ -48,7 +66,7 @@ pub struct ModuleDecl<'a> {
     attributes: &'a [Attribute],
     range: Range,
     label: Label<'a>,
-    body: &'a [Expression<'a>],
+    body: Vec<Declaration<'a>>,
 }
 
 #[derive(Debug)]
@@ -102,6 +120,7 @@ pub struct ParameterField {}
 #[derive(Debug)]
 pub struct Path<'a> {
     range: Range,
+    qualified: bool,
     segments: &'a [Label<'a>],
 }
 

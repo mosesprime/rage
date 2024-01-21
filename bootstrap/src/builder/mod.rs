@@ -1,12 +1,12 @@
 //! Rage Bootstrap Compiler
 
-use std::{fs, path::PathBuf, result::Result::Ok, sync::mpsc::Receiver};
+use std::{path::PathBuf, result::Result::Ok};
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 
-use crate::{interpreter::InstructionTree};
+use crate::interpreter::InstructionTree;
 
-use self::driver::{BuildResult, Driver, BuildTask, JobHandler};
+use self::{driver::{BuildTask, DriverPool, BuildEvent}, source::SourceRecord};
 
 mod driver;
 pub mod source;
@@ -16,8 +16,7 @@ pub struct Builder {
     /// Path to the file being compiled.
     path: PathBuf,
     num_cpus: usize,
-    job_handler: JobHandler,
-    drivers: Vec<Driver>,
+    driver_pool: DriverPool,
     sources: Vec<PathBuf>,
 }
 
@@ -26,30 +25,32 @@ impl Builder {
         if !path.is_file() {
             return Err(anyhow!("path must point to a file"));
         }
-        let job_handler = JobHandler::default();
-        let mut drivers = Vec::with_capacity(num_cpus);
-        for _ in 0..num_cpus {
-            drivers.push(Driver::spawn(&job_handler));
-        }
+        let driver_pool = DriverPool::new(num_cpus);
         Ok(Self {
             path: path.clone(),
             num_cpus,
-            job_handler,
-            drivers,
+            driver_pool,
             sources: vec![path],
         })
     }
 
     pub fn run(mut self) -> anyhow::Result<InstructionTree> {
-        // TODO: replace test driver with real drivers
-        let source = std::fs::read_to_string(self.path)?;
-        if let BuildResult::Parsed { lexemes } = self.job_handler.push_priority(BuildTask::Parse { source }) {
-            for lexeme in lexemes {
-                println!("{lexeme:?}");
+        let source = std::fs::read_to_string(self.path.clone())?;
+        //let record = SourceRecord { path: self.path, hash: blake3::hash(source.as_bytes()) };
+        self.driver_pool.add_priority_task(BuildTask::Parse { source });
+        loop {
+            let results = self.driver_pool.get_events();
+            if results.is_some() {
+                for result in results {
+                    match result {
+                        BuildEvent::Parsed { parse_tree } => {
+                            println!("{parse_tree:?}");
+                        },
+                        _ => unimplemented!(),
+                    }
+                }
+                break;
             }
-        }
-        for mut driver in self.drivers {
-            driver.shutdown()
         }
         Ok(InstructionTree)
     }
