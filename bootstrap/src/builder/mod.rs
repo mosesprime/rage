@@ -6,7 +6,7 @@ use anyhow::anyhow;
 
 use crate::interpreter::InstructionTree;
 
-use self::{driver::{BuildTask, DriverPool, BuildEvent}, source::SourceRecord};
+use self::{driver::{BuildTask, DriverPool, BuildEvent}, source::Source};
 
 mod driver;
 pub mod source;
@@ -35,8 +35,8 @@ impl Builder {
     }
 
     pub fn run(mut self) -> anyhow::Result<InstructionTree> {
-        let source = std::fs::read_to_string(self.path.clone())?;
-        //let record = SourceRecord { path: self.path, hash: blake3::hash(source.as_bytes()) };
+        // TODO: add assertion that source file len < u32::MAX via ReadMetadata
+        let source = Source::from_source(self.path)?;
         self.driver_pool.add_priority_task(BuildTask::Parse { source });
         loop {
             let results = self.driver_pool.get_events();
@@ -44,7 +44,7 @@ impl Builder {
                 for result in results {
                     match result {
                         BuildEvent::Parsed { parse_tree } => {
-                            println!("{parse_tree:?}");
+                            //println!("{parse_tree}");
                         },
                         _ => unimplemented!(),
                     }

@@ -3,42 +3,63 @@
 
 use crate::parser::lexeme::LexemeKind;
 
-#[derive(Debug, Clone)]
+use super::Span;
+
+#[derive(Debug)]
 pub struct Token {
-    kind: TokenKind,
-    length: u32,
+    pub kind: TokenKind,
+    pub span: Span,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, length: u32) -> Self {
-        Self { kind, length }
+    pub fn new(kind: TokenKind, span: Span) -> Self {
+        Self { kind, span }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum TokenKind {
     Identifier,
-    Operator(Operator),
-    Delimiter(Delimiter),
-    Literal(Literal),
-    Macro(Macro),
-    Comment(Comment),
-    Tuple(Tuple),
-    Path(Path),
-    /// *a
+    Operator(OperatorKind),
+    Delimiter(DelimiterKind),
+    Seperator(SeperatorKind),
+    Literal(LiteralKind),
+    Comment(CommentKind),
+    Terminator(TerminatorKind),
+    /// #
+    Meta,
+    Path,
     Pointer,
-    /// &a
     Reference,
-    /// a.b 
+    Borrow,
     Member,
 
-    UNKNOWN(LexemeKind),
+    VERBATIM(LexemeKind),
+    UNKNOWN,
 }
 
-#[derive(Debug, Clone)]
-pub enum Operator{
-    /* Arithmetic */ 
+///
+#[derive(Debug)]
+pub enum TerminatorKind {
+    /// ;
+    Explicit,
+    ///
+    Implied,
+}
 
+/// Operator.
+#[derive(Debug)]
+pub enum OperatorKind {
+    Arithmetic(ArithmeticOp),
+    Relational(RelationalOp),
+    Logical(LogicalOp),
+    Bitwise(BitwiseOp),
+    Assignment(AssignmentOp),
+}
+    
+/// Arithmetic operator.
+#[derive(Debug)]
+pub enum ArithmeticOp {
     /// a + b
     Addition,
     /// a - b
@@ -49,9 +70,11 @@ pub enum Operator{
     Division,
     /// a % b
     Modulo,
+}
 
-    /* Relational */
-
+/// Relational operator.
+#[derive(Debug)]
+pub enum RelationalOp {
     /// a == b
     Equal,
     /// a != b
@@ -64,18 +87,22 @@ pub enum Operator{
     GreaterOrEqual,
     /// a <= b
     LesserOrEqual,
+}
 
-    /* Logical */ 
-    
-    /// !a
+/// Logical operator.
+#[derive(Debug)]
+pub enum LogicalOp {
+    /// !a 
     LogicNOT,
     /// a && b
     LogicAND,
     /// a || b
     LogicOR,
+}
 
-    /* Bitwise */ 
-    
+/// Bitwise operator.
+#[derive(Debug)]
+pub enum BitwiseOp {
     /// ~a
     BitwiseNOT,
     /// a & b
@@ -92,9 +119,11 @@ pub enum Operator{
     BitwiseLeftRotate,
     /// a >>> b
     BitwiseRightRotate,
+}
 
-    /* Assignment */
-
+/// Assignment operator.
+#[derive(Debug)]
+pub enum AssignmentOp {
     /// a = b
     Assign,
     /// a += b
@@ -117,26 +146,32 @@ pub enum Operator{
     BitwiseLeftShiftAssign,
     /// a >>= b
     BitwiseRightShiftAssign,
-    //BitwiseLeftRotateAssign,
-    //BitwiseRightRotateAssign,
 }
 
-#[derive(Debug, Clone)]
-pub enum Delimiter {
-    OpenParen,
-    CloseParen,
-    OpenCurly,
-    CloseCurly,
-    OpenSquare,
-    CloseSquare,
-    OpenImplied,
-    CloseImplied,
-    Terminate,
-    Seperator,
+#[derive(Debug)]
+pub enum DelimiterKind {
+    /// ( ... )
+    Paren,
+    /// { ... }
+    Curly,
+    /// [ ... ]
+    Square,
+    /// < ... >
+    Angle,
+    /// 
+    Infered,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Literal {
+#[derive(Debug)]
+pub enum SeperatorKind {
+    /// a `,` b
+    List,
+    /// A `|` B
+    Variety,
+}
+
+#[derive(Debug)]
+pub enum LiteralKind {
     Bool,
     Char,
     Hex,
@@ -147,30 +182,21 @@ pub enum Literal {
     String,
 }
 
-#[derive(Debug, Clone)]
-pub enum Macro {
-    Attribute,
-    Directive,
-    Substitute,
-    Capture,
-    Repeat,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Comment {
+#[derive(Debug)]
+pub enum CommentKind {
+    /// ```
+    /// // Hi Mom!
+    /// ```
     Line,
+    /// ```rage
+    /// //*
+    /// * Hi Mom!
+    /// */
+    /// ```
     Block,
+    /// ```
+    /// /// Hi Mom!
+    /// ```
     Documentation,
 }
 
-#[derive(Debug, Clone)]
-pub enum Tuple {
-    Open,
-    Close,
-}
-
-#[derive(Debug, Clone)]
-pub enum Path {
-    Namespace,
-    Relative,
-}

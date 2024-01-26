@@ -1,9 +1,9 @@
 //! Rage Bootstrap
 //! Lexeme
 
-use crate::syntax::token::{Comment, Literal};
+use crate::syntax::token::{CommentKind, LiteralKind};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub struct Lexeme {
     pub kind: LexemeKind,
     /// Number of [char]s in lexeme.
@@ -19,17 +19,17 @@ impl Lexeme {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Whitespace {
+#[derive(Debug)]
+pub enum WhitespaceKind {
     Blank,
     NewLine,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub enum LexemeKind {
-    Whitespace(Whitespace),
-    Comment(Comment),
-    Literal(Literal),
+    Whitespace(WhitespaceKind),
+    Comment(CommentKind),
+    Literal(LiteralKind),
     /// my_variable, MyColor
     Term,
     /// !

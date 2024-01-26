@@ -3,9 +3,9 @@
 
 use std::str::Chars;
 
-use crate::syntax::token::{Comment, Literal};
+use crate::syntax::token::{CommentKind, LiteralKind};
 
-use super::lexeme::{Lexeme, LexemeKind, Whitespace};
+use super::lexeme::{Lexeme, LexemeKind, WhitespaceKind};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
@@ -34,11 +34,11 @@ impl<'a> Scanner<'a> {
         match c {
             '\n' => {
                 length += self.consume(|c| c == &'\n');
-                return Lexeme::new(LexemeKind::Whitespace(Whitespace::NewLine), length);
+                return Lexeme::new(LexemeKind::Whitespace(WhitespaceKind::NewLine), length);
             },
             _ => {
                 length += self.consume(|c| c.is_ascii_whitespace() && c != &'\n');
-                return Lexeme::new(LexemeKind::Whitespace(Whitespace::Blank), length)
+                return Lexeme::new(LexemeKind::Whitespace(WhitespaceKind::Blank), length)
             }
         }
     }
@@ -61,15 +61,15 @@ impl<'a> Scanner<'a> {
                         break;
                     }
                 }
-                return Lexeme::new(LexemeKind::Comment(Comment::Block), length);
+                return Lexeme::new(LexemeKind::Comment(CommentKind::Block), length);
             }
             Some('/') => {
                 length += self.consume(|c| c != &'\n');
-                return Lexeme::new(LexemeKind::Comment(Comment::Documentation), length);
+                return Lexeme::new(LexemeKind::Comment(CommentKind::Documentation), length);
             }
             _ => {
                 length += self.consume(|c| c != &'\n');
-                return Lexeme::new(LexemeKind::Comment(Comment::Line), length);
+                return Lexeme::new(LexemeKind::Comment(CommentKind::Line), length);
             }
         }
     }
@@ -88,17 +88,17 @@ impl<'a> Scanner<'a> {
                 Some('x') => { 
                     self.chars.next();
                     length += self.consume(|c| c.is_ascii_digit());
-                    Some(Literal::Hex)
+                    Some(LiteralKind::Hex)
                 },
                 Some('b') => {
                     self.chars.next();
                     length += self.consume(|c| c.is_ascii_digit());
-                    Some(Literal::Binary)
+                    Some(LiteralKind::Binary)
                 },
                 Some('o') => { 
                     self.chars.next();
                     length += self.consume(|c| c.is_ascii_digit());
-                    Some(Literal::Octal)
+                    Some(LiteralKind::Octal)
                 },
                 Some(c) => {
                     if c.is_ascii_digit() {
@@ -107,7 +107,7 @@ impl<'a> Scanner<'a> {
                     None
                 },
                 None => {
-                    Some(Literal::Integer)
+                    Some(LiteralKind::Integer)
                 },
             },
             _ => {
@@ -121,10 +121,10 @@ impl<'a> Scanner<'a> {
                 Some('.') => {
                     self.chars.next();
                     length += self.consume(|c| c.is_ascii_digit());
-                    return Lexeme::new(LexemeKind::Literal(Literal::Float), length);
+                    return Lexeme::new(LexemeKind::Literal(LiteralKind::Float), length);
                 },
                 _ => {
-                    return Lexeme::new(LexemeKind::Literal(Literal::Integer), length);
+                    return Lexeme::new(LexemeKind::Literal(LiteralKind::Integer), length);
                 },
             }
         }
@@ -136,12 +136,12 @@ impl<'a> Scanner<'a> {
         // TODO: remove unwrap
         self.chars.next().unwrap(); // consume closing quote
         length += 1; // include closing quote
-        return Lexeme::new(LexemeKind::Literal(Literal::String), length);
+        return Lexeme::new(LexemeKind::Literal(LiteralKind::String), length);
     }
 
     fn character(&mut self) -> Lexeme {
         let length = self.consume(|c| c != &'\'');
-        return Lexeme::new(LexemeKind::Literal(Literal::Char), length);
+        return Lexeme::new(LexemeKind::Literal(LiteralKind::Char), length);
     }
 
     fn symbol(&mut self, c: char) -> Lexeme {

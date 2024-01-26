@@ -5,9 +5,9 @@ use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{sel
 
 use anyhow::{Context, anyhow};
 
-use crate::parser::{Parser, lexeme::Lexeme, tree::ParseTree};
+use crate::{builder::source, parser::{Parser, lexeme::Lexeme, tree::ParseTree}};
 
-use super::source::{SourceRecord};
+use super::source::Source;
 
 pub struct DriverPool {
     queue: VecDeque<BuildTask>,
@@ -130,29 +130,26 @@ impl Driver {
 }
 
 /// Product of a task being executed.
-#[derive(Debug)]
 pub enum BuildEvent {
     ReadMetadata { metadata: Metadata },
     ReadDir { read_dir: ReadDir },
     ReadFile { 
-        record: SourceRecord,
-        source: String,
+        source: Source,
     },
     Parsed { 
-        // TODO: better handle parse_tree lifetime
-        parse_tree: ParseTree<'static>,
+        parse_tree: Vec<Lexeme>,
     },
     // TODO: expand errors
     Error(anyhow::Error),
 }
 
 /// Task to be executed.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum BuildTask {
     ReadMetadata { path: PathBuf },
     ReadDir { path: PathBuf },
     ReadFile { path: PathBuf },
-    Parse { source: String },
+    Parse { source: Source },
     SHUTDOWN,
 }
 
@@ -175,16 +172,18 @@ impl BuildTask {
             },
             BuildTask::ReadFile { path } => {
                 log::debug!("reading file at {}", path.display());
-                match std::fs::read_to_string(path.clone()).context("failed to read file") {
-                    Ok(source) => {
-                        let hash = blake3::hash(source.as_bytes());
-                        return BuildEvent::ReadFile { record: SourceRecord::new(path, hash), source };
-                    },
+                match Source::from_source(path).context("failed to read source file") {
+                    Ok(source) => return BuildEvent::ReadFile { source },
                     Err(e) => e,
                 }
             },
             BuildTask::Parse { source } => {
-                return BuildEvent::Parsed { parse_tree: Parser::new(source).run() };
+                if let Some(source_text) = source.source_text() {
+                    Parser::new(source_text, source.id()).run();
+                    return BuildEvent::Parsed { parse_tree: Vec::default() };
+                } else {
+                    anyhow!("missing source text")
+                }
             },
             BuildTask::SHUTDOWN => unreachable!(),
         };

@@ -1,126 +1,47 @@
 //! Rage Bootstrap
-//! Parse Tree
 
-#[derive(Debug)]
-pub struct Range {
-    pub start: u32,
-    pub end: u32,
+use std::fmt::Display;
+
+use crate::{builder::source::SourceId, common::Attribute, syntax::{AttrExpr, Statement}};
+
+use super::{Parse, ParseBuffer};
+
+/// Suggared abstract syntax tree (AST) of a given source.
+pub struct ParseTree {
+    /// [SourceId] of the file.
+    source_id: SourceId,
+    /// [Attribute]s to apply to the file.
+    attributes: Vec<Attribute>,
+    /// Parsed [Statement]s in the file.
+    statements: Vec<Statement>,
+    /// 
+    unresolved: Vec<usize>, // TODO: unresolved parsing
 }
 
-pub type Label<'a> = &'a str;
-
-#[derive(Debug)]
-pub struct ParseTree<'a> {
-    pub declarations: Vec<Declaration<'a>>,
-    //pub directives: Vec<Directives<'a>>
+impl Display for ParseTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SourceId: {}\nStatements: {:#?}\nUnresolved: {:#?}", self.source_id.to_hex(), self.statements, self.unresolved)
+    }
 }
 
-#[derive(Debug)]
-pub enum Declaration<'a> {
-    LocalDecl(&'a LocalDecl<'a>),
-    TypeDecl(&'a TypeDecl<'a>),
-    ModuleDecl(&'a ModuleDecl<'a>),
-    FuncDecl(&'a FuncDecl<'a>),
+impl Parse for ParseTree {
+    fn parse(buffer: &ParseBuffer) -> Result<Option<Self>, super::ParseError> {
+        todo!()
+    }
 }
 
-#[derive(Debug)]
-pub enum Expression<'a> {
-    CallExpr(&'a CallExpr<'a>),
-    ReturnExpr(&'a ReturnExpr<'a>),
-    TupleExpr(&'a TupleExpr<'a>),
+impl ParseTree {
+    pub fn new(source_id: &SourceId) -> Self {
+        Self { 
+            source_id: source_id.clone(),
+            attributes: Vec::default(),
+            statements: Vec::default(),
+            unresolved: Vec::default(),
+        }
+    }
 
-    Symbol(Label<'a>),
-    UNKNOWN,
-}
-
-#[derive(Debug)]
-pub struct TupleExpr<'a> {
-    range: Range,
-    inners: &'a [Expression<'a>]
-}
-
-#[derive(Debug)]
-pub struct ReturnExpr<'a> {
-    range: Range,
-    expr: &'a Expression<'a>,
-}
-
-#[derive(Debug)]
-pub struct LocalDecl<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    label: Label<'a>,
-    rhs: &'a Expression<'a>,
-}
-
-#[derive(Debug)]
-pub struct TypeDecl<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    generics: &'a [GenericField<'a>],
-    //fields: &'a [],
-}
-
-#[derive(Debug)]
-pub struct ModuleDecl<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    label: Label<'a>,
-    body: Vec<Declaration<'a>>,
-}
-
-#[derive(Debug)]
-pub struct CallExpr<'a> {
-    range: Range,
-    label: Label<'a>,
-    //arguments: &'a [],
-}
-
-#[derive(Debug)]
-pub struct FuncDecl<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    label: Label<'a>,
-    generics: &'a [GenericField<'a>],
-    params: &'a [ParameterField],
-    results: &'a [ResultField],
-    body: &'a [Expression<'a>],
-}
-
-#[derive(Debug)]
-pub struct GenericField<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    label: Label<'a>,
-    // type-path
-}
-
-#[derive(Debug)]
-pub enum Attribute {
-    Mutable,
-    Public,
-}
-
-#[derive(Debug)]
-pub struct DataTypeField<'a> {
-    attributes: &'a [Attribute],
-    range: Range,
-    
-}
-
-#[derive(Debug)]
-pub struct ResultField {
-    range: Range,
-    //kind: Typ,
-}
-
-#[derive(Debug)]
-pub struct ParameterField {}
-
-#[derive(Debug)]
-pub struct Path<'a> {
-    range: Range,
-    qualified: bool,
-    segments: &'a [Label<'a>],
+    pub fn id(&self) -> &SourceId {
+        &self.source_id
+    }
 }
 
