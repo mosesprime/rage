@@ -25,7 +25,7 @@ Directives that come default with the language.
 ## Examples
 Insert macro into code.
 ```rage 
-#define { echo $s:string } = {
+#define { echo $(s string) } = {
     println($s)
 }
 

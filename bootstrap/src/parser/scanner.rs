@@ -9,12 +9,14 @@ use super::lexeme::{Lexeme, LexemeKind, WhitespaceKind};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
+    source: &'a str,
     chars: std::iter::Peekable<Chars<'a>>,
 }
 
 impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
+            source,
             chars: source.chars().peekable(),
         }
     }
@@ -45,7 +47,7 @@ impl<'a> Scanner<'a> {
 
     /// Handle comments.
     fn comment(&mut self) -> Lexeme {
-        let mut length = 1;
+        let mut length = 2;
         match self.chars.peek() {
             Some('*') => {
                 let mut prev = '_';

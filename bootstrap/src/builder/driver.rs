@@ -179,7 +179,8 @@ impl BuildTask {
             },
             BuildTask::Parse { source } => {
                 if let Some(source_text) = source.source_text() {
-                    Parser::new(source_text, source.id()).run();
+                    let res = Parser::new(source_text, source.id()).run().expect("unhandled parse error");
+                    log::info!("{}", res);
                     return BuildEvent::Parsed { parse_tree: Vec::default() };
                 } else {
                     anyhow!("missing source text")

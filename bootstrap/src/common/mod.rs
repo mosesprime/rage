@@ -1,6 +1,8 @@
 //! Rage Bootstrap
 //! Common 
 
+pub mod span;
+
 ///
 #[derive(Debug)]
 pub enum Safety {

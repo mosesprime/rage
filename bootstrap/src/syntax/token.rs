@@ -1,11 +1,10 @@
 //! Rage Bootstrap
 //! Syntax Token
 
-use crate::parser::lexeme::LexemeKind;
+use crate::{common::span::Span, parser::lexeme::{Lexeme, LexemeKind}};
 
-use super::Span;
+use super::Identifier;
 
-#[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
@@ -17,25 +16,22 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
 pub enum TokenKind {
-    Identifier,
+    Identifier(Identifier),
+    Terminator(TerminatorKind),
     Operator(OperatorKind),
     Delimiter(DelimiterKind),
+    UnpairedDelimiter(UnpairedDelimiter),
     Seperator(SeperatorKind),
-    Literal(LiteralKind),
-    Comment(CommentKind),
-    Terminator(TerminatorKind),
-    /// #
-    Meta,
-    Path,
-    Pointer,
-    Reference,
-    Borrow,
-    Member,
-
-    VERBATIM(LexemeKind),
+    Literal(LiteralRepr),
+    Verbatim(LexemeKind),
     UNKNOWN,
+}
+
+#[derive(Debug)]
+pub struct Terminator {
+    pub kind: TerminatorKind,
+    pub span: Span,
 }
 
 ///
@@ -43,23 +39,35 @@ pub enum TokenKind {
 pub enum TerminatorKind {
     /// ;
     Explicit,
-    ///
+    /// implied terminator
     Implied,
+}
+
+#[derive(Debug)]
+pub struct Operator {
+    pub kind: OperatorKind,
+    pub span: Span,
 }
 
 /// Operator.
 #[derive(Debug)]
 pub enum OperatorKind {
-    Arithmetic(ArithmeticOp),
-    Relational(RelationalOp),
-    Logical(LogicalOp),
-    Bitwise(BitwiseOp),
-    Assignment(AssignmentOp),
+    Arithmetic(ArithmeticOpKind),
+    Relational(RelationalOpKind),
+    Logical(LogicalOpKind),
+    Bitwise(BitwiseOpKind),
+    Assignment(AssignmentOpKind),
+    /// $a
+    Borrow,
+    /// *a
+    Pointer,
+    /// &a
+    Reference,
 }
     
 /// Arithmetic operator.
 #[derive(Debug)]
-pub enum ArithmeticOp {
+pub enum ArithmeticOpKind {
     /// a + b
     Addition,
     /// a - b
@@ -74,7 +82,7 @@ pub enum ArithmeticOp {
 
 /// Relational operator.
 #[derive(Debug)]
-pub enum RelationalOp {
+pub enum RelationalOpKind {
     /// a == b
     Equal,
     /// a != b
@@ -91,7 +99,7 @@ pub enum RelationalOp {
 
 /// Logical operator.
 #[derive(Debug)]
-pub enum LogicalOp {
+pub enum LogicalOpKind {
     /// !a 
     LogicNOT,
     /// a && b
@@ -102,7 +110,7 @@ pub enum LogicalOp {
 
 /// Bitwise operator.
 #[derive(Debug)]
-pub enum BitwiseOp {
+pub enum BitwiseOpKind {
     /// ~a
     BitwiseNOT,
     /// a & b
@@ -123,7 +131,7 @@ pub enum BitwiseOp {
 
 /// Assignment operator.
 #[derive(Debug)]
-pub enum AssignmentOp {
+pub enum AssignmentOpKind {
     /// a = b
     Assign,
     /// a += b
@@ -149,6 +157,22 @@ pub enum AssignmentOp {
 }
 
 #[derive(Debug)]
+pub struct Delimiter {
+    pub kind: DelimiterKind,
+    pub span: Span,
+}
+
+pub struct UnpairedDelimiter {
+    pub kind: DelimiterKind,
+    pub side: DelimiterSide,
+}
+
+pub enum DelimiterSide {
+    Open, 
+    Close,
+}
+
+#[derive(Debug)]
 pub enum DelimiterKind {
     /// ( ... )
     Paren,
@@ -163,11 +187,37 @@ pub enum DelimiterKind {
 }
 
 #[derive(Debug)]
+pub struct Seperator {
+    pub kind: SeperatorKind,
+    pub span: Span
+}
+
+#[derive(Debug)]
 pub enum SeperatorKind {
     /// a `,` b
     List,
+    /// A`:`B 
+    Path,
     /// A `|` B
     Variety,
+}
+
+#[derive(Debug)]
+pub struct Literal {
+    pub repr: LiteralRepr,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub enum LiteralRepr {
+    Bool(bool),
+    Char(char),
+    Hex(Box<str>),
+    Octal(Box<str>),
+    Binary(Box<str>),
+    Integer(Box<str>),
+    Float(Box<str>),
+    String(Box<str>),
 }
 
 #[derive(Debug)]
@@ -180,6 +230,13 @@ pub enum LiteralKind {
     Integer,
     Float,
     String,
+}
+
+#[derive(Debug)]
+pub struct Comment {
+    pub kind: CommentKind,
+    pub raw: Box<str>,
+    pub span: Span,
 }
 
 #[derive(Debug)]
@@ -199,4 +256,5 @@ pub enum CommentKind {
     /// ```
     Documentation,
 }
+
 
