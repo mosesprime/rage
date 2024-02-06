@@ -102,4 +102,10 @@ main fn() {
 
         _ = Color<RGB{ r: 0, g: 0, b:0 }> // construct the enum with nested struct
     }
+
+    {
+        hex = 0x55aa
+        binary = 0b00110011
+        strange = 011 
+    }
 }

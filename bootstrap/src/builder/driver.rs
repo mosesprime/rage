@@ -1,13 +1,13 @@
 //! Rage Bootstrap
 //! Compiler Builder
 
-use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::{mpsc::{self, Sender, Receiver, TryRecvError}, Arc, Mutex}, path::PathBuf, collections::VecDeque};
+use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::mpsc::{self, Sender, Receiver, TryRecvError}, path::PathBuf, collections::VecDeque};
 
 use anyhow::{Context, anyhow};
 
-use crate::{builder::source, parser::{Parser, lexeme::Lexeme, tree::ParseTree}};
+use crate::parser::parse_file;
 
-use super::source::Source;
+use super::{incrimental::Incrimental, source::Source};
 
 pub struct DriverPool {
     queue: VecDeque<BuildTask>,
@@ -137,7 +137,7 @@ pub enum BuildEvent {
         source: Source,
     },
     Parsed { 
-        parse_tree: Vec<Lexeme>,
+        parse_tree: Vec<usize>,// TODO: placeholder
     },
     // TODO: expand errors
     Error(anyhow::Error),
@@ -172,15 +172,14 @@ impl BuildTask {
             },
             BuildTask::ReadFile { path } => {
                 log::debug!("reading file at {}", path.display());
-                match Source::from_source(path).context("failed to read source file") {
+                match Source::from_path(path).context("failed to read source file") {
                     Ok(source) => return BuildEvent::ReadFile { source },
                     Err(e) => e,
                 }
             },
             BuildTask::Parse { source } => {
-                if let Some(source_text) = source.source_text() {
-                    let res = Parser::new(source_text, source.id()).run().expect("unhandled parse error");
-                    log::info!("{}", res);
+                if let Incrimental::RawText(text) = source.incrimental {
+                    let x = parse_file(text.as_str()).expect("parse error");
                     return BuildEvent::Parsed { parse_tree: Vec::default() };
                 } else {
                     anyhow!("missing source text")

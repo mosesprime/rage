@@ -3,26 +3,34 @@
 
 use std::str::Chars;
 
-use crate::syntax::token::{CommentKind, LiteralKind};
-
-use super::lexeme::{Lexeme, LexemeKind, WhitespaceKind};
+use crate::syntax::{lexeme::{Lexeme, LexemeKind}, CommentKind, LiteralKind, WhitespaceKind};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
-    source: &'a str,
+    cursor: usize,
+    content: &'a str,
     chars: std::iter::Peekable<Chars<'a>>,
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(content: &'a str) -> Self {
         Self {
-            source,
-            chars: source.chars().peekable(),
+            cursor: 0,
+            content,
+            chars: content.chars().peekable(),
+        }
+    }
+
+    /// # Safety
+    /// Panics if asked to get value out of bounds.
+    fn get_value(&self, length: usize) -> &str {
+        unsafe {
+            self.content.get_unchecked(self.cursor .. self.cursor + length)
         }
     }
 
     /// Consumes while the predicate is true. Returns number of [`char`] consumed.
-    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> u32 {
+    fn consume(&mut self, mut predicate: impl FnMut(&char) -> bool) -> usize {
         let mut len = 0;
         while self.chars.next_if(&mut predicate).is_some() {
             len += 1;
@@ -30,30 +38,81 @@ impl<'a> Scanner<'a> {
         return len;
     }
 
+    fn peek_char(&mut self) -> Option<&char> {
+        self.chars.peek()
+    }
+
+    fn next_char(&mut self) -> Option<char> {
+        self.chars.next()
+    }
+
+}
+
+impl Iterator for Scanner<'_> {
+    type Item = Lexeme;
+    fn next(&mut self) -> Option<Self::Item> {
+        let first = match self.chars.next() {
+            Some(c) => c,
+            None => return None,
+        };
+        let lexeme = match first {
+            // whitespace
+            c if c.is_ascii_whitespace() => whitespace(self, c),
+
+            // comments, or slash
+            /*'/' => match self.chars.peek() {
+                Some('/') => {
+                    self.chars.next();
+                    comment(self)
+                },
+                _ => symbol(self, '/'),
+            },*/
+
+            // alphabetic
+            c if c.is_ascii_alphabetic() => term(self),
+
+            // numeric
+            c if c.is_ascii_digit() => number(self, c), 
+
+            // string
+            '"' => string(self),
+
+            // character
+            '\'' => character(self),
+
+            c if c.is_ascii_punctuation() => symbol(self, c),
+
+            _ => Lexeme::with_length(LexemeKind::UNKNOWN, 1),
+        };
+        self.cursor += lexeme.count();
+        return Some(lexeme);
+    }
+}
+
     /// Handle ASCII whitespace.
-    fn whitespace(&mut self, c: char) -> Lexeme {
+    fn whitespace<'a>(scanner: &mut Scanner<'a>, c: char) -> Lexeme {
         let mut length = 1;
         match c {
             '\n' => {
-                length += self.consume(|c| c == &'\n');
-                return Lexeme::new(LexemeKind::Whitespace(WhitespaceKind::NewLine), length);
+                length += scanner.consume(|c| c == &'\n');
+                return Lexeme::with_length(LexemeKind::Whitespace(WhitespaceKind::NewLine), length);
             },
             _ => {
-                length += self.consume(|c| c.is_ascii_whitespace() && c != &'\n');
-                return Lexeme::new(LexemeKind::Whitespace(WhitespaceKind::Blank), length)
-            }
+                length += scanner.consume(|c| c.is_ascii_whitespace() && c != &'\n');
+                return Lexeme::with_length(LexemeKind::Whitespace(WhitespaceKind::Blank), length);
+            },
         }
     }
 
     /// Handle comments.
-    fn comment(&mut self) -> Lexeme {
+    fn comment<'a>(scanner: &mut Scanner<'a>) -> Lexeme {
         let mut length = 2;
-        match self.chars.peek() {
+        match scanner.peek_char() {
             Some('*') => {
                 let mut prev = '_';
                 loop {
                     length += 1;
-                    if let Some(new) = self.chars.next() {
+                    if let Some(new) = scanner.next_char() {
                         if prev == '*' && new == '/' {
                             break;
                         } else {
@@ -63,48 +122,54 @@ impl<'a> Scanner<'a> {
                         break;
                     }
                 }
-                return Lexeme::new(LexemeKind::Comment(CommentKind::Block), length);
-            }
+                return Lexeme::with_value(LexemeKind::Comment(CommentKind::Block), scanner.get_value(length));
+            },
             Some('/') => {
-                length += self.consume(|c| c != &'\n');
-                return Lexeme::new(LexemeKind::Comment(CommentKind::Documentation), length);
+                length += scanner.consume(|c| c != &'\n');
+                return Lexeme::with_value(LexemeKind::Comment(CommentKind::Documentation), scanner.get_value(length));
             }
             _ => {
-                length += self.consume(|c| c != &'\n');
-                return Lexeme::new(LexemeKind::Comment(CommentKind::Line), length);
+                length += scanner.consume(|c| c != &'\n');
+                return Lexeme::with_value(LexemeKind::Comment(CommentKind::Line), scanner.get_value(length));
             }
         }
     }
 
     /// Handle alphabetic terms. Yields keywords, identifiers, bool-literal, etc.
-    fn term(&mut self) -> Lexeme {
+    fn term<'a>(scanner: &mut Scanner<'a>) -> Lexeme {
         let mut length = 1;
-        length += self.consume(|c| c.is_ascii_alphanumeric() || c == &'_');
-        return Lexeme::new(LexemeKind::Term, length);
+        length += scanner.consume(|c| c.is_ascii_alphanumeric() || c == &'_');
+        let text = scanner.get_value(length);
+        return match text {
+            "true" => Lexeme::with_value(LexemeKind::Literal(LiteralKind::Bool), text),
+            "false" => Lexeme::with_value(LexemeKind::Literal(LiteralKind::Bool), text),
+            _ => Lexeme::with_value(LexemeKind::Term, text),
+        };
     }
 
-    fn number(&mut self, c: char) -> Lexeme {
+    fn number<'a>(scanner: &mut Scanner<'a>, c: char) -> Lexeme {
         let mut length = 1;
         let kind = match c {
-            '0' => match self.chars.peek() {
+            '0' => match scanner.peek_char() {
                 Some('x') => { 
-                    self.chars.next();
-                    length += self.consume(|c| c.is_ascii_digit());
+                    scanner.next_char();
+                    length += scanner.consume(|c| c.is_ascii_hexdigit()) + 1;
                     Some(LiteralKind::Hex)
                 },
                 Some('b') => {
-                    self.chars.next();
-                    length += self.consume(|c| c.is_ascii_digit());
+                    scanner.next_char();
+                    length += scanner.consume(|c| c == &'0'|| c == &'1') + 1;
                     Some(LiteralKind::Binary)
                 },
                 Some('o') => { 
-                    self.chars.next();
-                    length += self.consume(|c| c.is_ascii_digit());
+                    scanner.next_char();
+                    // TODO: finish implimenting octal lexing
+                    length += scanner.consume(|c| c.is_ascii_digit()) + 1;
                     Some(LiteralKind::Octal)
                 },
                 Some(c) => {
                     if c.is_ascii_digit() {
-                        length += self.consume(|c| c.is_ascii_digit());
+                        length += scanner.consume(|c| c.is_ascii_digit());
                     }
                     None
                 },
@@ -113,117 +178,209 @@ impl<'a> Scanner<'a> {
                 },
             },
             _ => {
-                length += self.consume(|c| c.is_ascii_digit());
+                length += scanner.consume(|c| c.is_ascii_digit());
                 None
             },
         };
         match kind {
-            Some(k) => { return Lexeme::new(LexemeKind::Literal(k), length); },
-            None => match self.chars.peek() {
+            Some(k) => { return Lexeme::with_value(LexemeKind::Literal(k), scanner.get_value(length)); },
+            None => match scanner.peek_char() {
                 Some('.') => {
-                    self.chars.next();
-                    length += self.consume(|c| c.is_ascii_digit());
-                    return Lexeme::new(LexemeKind::Literal(LiteralKind::Float), length);
+                    scanner.next_char();
+                    length += scanner.consume(|c| c.is_ascii_digit()) + 1; // include '.'
+                    return Lexeme::with_value(LexemeKind::Literal(LiteralKind::Float), scanner.get_value(length));
                 },
                 _ => {
-                    return Lexeme::new(LexemeKind::Literal(LiteralKind::Integer), length);
+                    return Lexeme::with_value(LexemeKind::Literal(LiteralKind::Integer), scanner.get_value(length));
                 },
             }
         }
     }
 
-    fn string(&mut self) -> Lexeme {
+    fn string<'a>(scanner: &mut Scanner<'a>) -> Lexeme {
         let mut length = 1;
-        length += self.consume(|c| c != &'"');
-        // TODO: remove unwrap
-        self.chars.next().unwrap(); // consume closing quote
+        length += scanner.consume(|c| c != &'"');
+        scanner.next_char(); // consume closing quote
         length += 1; // include closing quote
-        return Lexeme::new(LexemeKind::Literal(LiteralKind::String), length);
+        return Lexeme::with_value(LexemeKind::Literal(LiteralKind::String), scanner.get_value(length));
     }
 
-    fn character(&mut self) -> Lexeme {
-        let length = self.consume(|c| c != &'\'');
-        return Lexeme::new(LexemeKind::Literal(LiteralKind::Char), length);
+    fn character<'a>(scanner: &mut Scanner<'a>) -> Lexeme {
+        scanner.next_char(); // consume opening
+        let length = scanner.consume(|c| c != &'\'') + 1; // include opening
+        return Lexeme::with_value(LexemeKind::Literal(LiteralKind::Char), scanner.get_value(length));
     }
 
-    fn symbol(&mut self, c: char) -> Lexeme {
-        let length = 1;
-        let kind = match c {
-            '!' => LexemeKind::Exclamation,
-            '"' => LexemeKind::Quotation,
-            '#' => LexemeKind::Number,
-            '$' => LexemeKind::Dollar,
-            '%' => LexemeKind::Percent,
-            '&' => LexemeKind::Ampersand,
-            '\'' => LexemeKind::Apostrophe,
-            '(' => LexemeKind::LParen,
-            ')' => LexemeKind::RParen,
-            '*' => LexemeKind::Asterisk,
-            '+' => LexemeKind::Plus,
-            ',' => LexemeKind::Comma,
-            '-' => LexemeKind::Hyphen,
-            '.' => LexemeKind::Dot,
-            '/' => LexemeKind::Slash,
-            ':' => LexemeKind::Colon,
-            ';' => LexemeKind::Semicolon,
-            '<' => LexemeKind::Lesser,
-            '=' => LexemeKind::Equal,
-            '>' => LexemeKind::Greater,
-            '?' => LexemeKind::Question,
-            '@' => LexemeKind::At,
-            '[' => LexemeKind::LSquare,
-            '\\' => LexemeKind::Backslash,
-            ']' => LexemeKind::RSquare,
-            '^' => LexemeKind::Caret,
-            '_' => LexemeKind::Underscore,
-            '`' => LexemeKind::Accent,
-            '{' => LexemeKind::LCurly,
-            '|' => LexemeKind::Pipe,
-            '}' => LexemeKind::RCurly,
-            '~' => LexemeKind::Tilde,
-            _ => LexemeKind::UNKNOWN,
-        };
-        return Lexeme::new(kind, length);
-    }
-}
-
-impl<'a> Iterator for Scanner<'a> {
-    type Item = Lexeme;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let first = match self.chars.next() {
-            Some(c) => c,
-            None => return None,
-        };
-
-        return match first {
-            // whitespace
-            c if c.is_ascii_whitespace() => Some(self.whitespace(c)),
-
-            // comments, or slash
-            '/' => match self.chars.peek() {
-                Some('/') => {
-                    self.chars.next();
-                    Some(self.comment())
+    fn symbol<'a>(scanner: &mut Scanner<'a>, c: char) -> Lexeme {
+        match c {
+            '!' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::NotEqual, 2);
                 },
-                _ => Some(Lexeme::new(LexemeKind::Slash, 1)),
+                _ => return Lexeme::with_length(LexemeKind::Exclamation, 1),
             },
-
-            // alphabetic
-            c if c.is_ascii_alphabetic() => Some(self.term()),
-
-            // numeric
-            c if c.is_ascii_digit() => Some(self.number(c)),
-
-            // string
-            '"' => Some(self.string()),
-
-            // character
-            '\'' => Some(self.character()),
-
-            c if c.is_ascii_punctuation() => Some(self.symbol(c)),
-
-            _ => Some(Lexeme::new(LexemeKind::UNKNOWN, 1)),
-        };
+            //'"' => LexemeKind::Quotation,
+            '#' => return Lexeme::with_length(LexemeKind::Number, 1),
+            '$' => return Lexeme::with_length(LexemeKind::Dollar, 1),
+            '%' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::ModuloEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Percent, 1),
+            },
+            '&' => match scanner.peek_char() {
+                Some('&') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::AndAnd, 2);
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::AndEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Ampersand, 1),
+            },
+            //'\'' => LexemeKind::Apostrophe,
+            '(' => return Lexeme::with_length(LexemeKind::LParen, 1),
+            ')' => return Lexeme::with_length(LexemeKind::RParen, 1),
+            '*' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::MultiplyEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Asterisk, 1),
+            },
+            '+' => match scanner.peek_char() {
+                Some('+') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::Incriment, 2);
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::PlusEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Plus, 1),
+            },
+            ',' => return Lexeme::with_length(LexemeKind::Comma, 1),
+            '-' => match scanner.peek_char() {
+                Some('-') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::Decriment, 2);
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::MinusEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Hyphen, 1),
+            },
+            '.' => match scanner.peek_char() {
+                Some('.') => {
+                    scanner.next_char();
+                    match scanner.peek_char() {
+                        Some('.') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::Ellipsis, 3);
+                        },
+                        Some('=') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::InclusiveRange, 3); 
+                        },
+                        _ => return Lexeme::with_length(LexemeKind::ExclusiveRange, 2),
+                    }
+                },
+                _ => return Lexeme::with_length(LexemeKind::Dot, 1),
+            },
+            '/' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::DivideEqual, 2);
+                },
+                Some('/') => {
+                    scanner.next_char();
+                    return comment(scanner);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Slash, 1),
+            },
+            ':' => return Lexeme::with_length(LexemeKind::Colon, 1),
+            ';' => return Lexeme::with_length(LexemeKind::Semicolon, 1),
+            '<' => match scanner.peek_char() {
+                Some('<') => {
+                    scanner.next_char();
+                    match scanner.peek_char() {
+                        Some('<') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::LeftRotate, 3);
+                        },
+                        Some('=') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::LeftShiftEqual, 3);
+                        },
+                        _ => return Lexeme::with_length(LexemeKind::LeftShift, 2),
+                    }
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::LesserOrEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Lesser, 1),
+            },
+            '=' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::EqualEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Equal, 1),
+            },
+            '>' => match scanner.peek_char() {
+                Some('>') => {
+                    scanner.next_char();
+                    match scanner.peek_char() {
+                        Some('>') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::RightRotate, 3);
+                        },
+                        Some('=') => {
+                            scanner.next_char();
+                            return Lexeme::with_length(LexemeKind::RightShiftEqual, 3);
+                        },
+                        _ => return Lexeme::with_length(LexemeKind::RightShift, 2),
+                    }
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::GreaterOrEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Greater, 1),
+            },
+            //'?' => LexemeKind::Question,
+            //'@' => LexemeKind::At,
+            '[' => return Lexeme::with_length(LexemeKind::LSquare, 1),
+            //'\\' => LexemeKind::Backslash,
+            ']' => return Lexeme::with_length(LexemeKind::RSquare, 1),
+            '^' => match scanner.peek_char() {
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::XorEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Caret, 1),
+            },
+            //'_' => LexemeKind::Underscore,
+            //'`' => LexemeKind::Accent,
+            '{' => return Lexeme::with_length(LexemeKind::LCurly, 1),
+            '|' => match scanner.peek_char() {
+                Some('|') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::OrOr, 2);
+                },
+                Some('=') => {
+                    scanner.next_char();
+                    return Lexeme::with_length(LexemeKind::OrEqual, 2);
+                },
+                _ => return Lexeme::with_length(LexemeKind::Pipe, 1),
+            },
+            '}' => return Lexeme::with_length(LexemeKind::RCurly, 1),
+            '~' => return Lexeme::with_length(LexemeKind::Tilde, 1),
+            _ => return Lexeme::with_length(LexemeKind::UNKNOWN, 1),
+        }
     }
-}

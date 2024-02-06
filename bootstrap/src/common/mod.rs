@@ -1,7 +1,11 @@
 //! Rage Bootstrap
 //! Common 
 
-pub mod span;
+#[derive(Debug, Clone)]
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
 
 ///
 #[derive(Debug)]

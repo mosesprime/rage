@@ -9,6 +9,7 @@ use crate::interpreter::InstructionTree;
 use self::{driver::{BuildTask, DriverPool, BuildEvent}, source::Source};
 
 mod driver;
+mod incrimental;
 pub mod source;
 
 /// Builds and maintains the [`InstructionTree`].
@@ -36,7 +37,7 @@ impl Builder {
 
     pub fn run(mut self) -> anyhow::Result<InstructionTree> {
         // TODO: add assertion that source file len < u32::MAX via ReadMetadata
-        let source = Source::from_source(self.path)?;
+        let source = Source::from_path(self.path)?;
         self.driver_pool.add_priority_task(BuildTask::Parse { source });
         loop {
             let results = self.driver_pool.get_events();

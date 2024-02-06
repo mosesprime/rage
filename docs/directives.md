@@ -12,6 +12,7 @@ Directives that come baked into the bootstrapper.
 - `#run` : Executes the following code like a script. Just-In-Time (JIT) compiled.
 - `#use` : Pulls in a another module.
 - `#define` : Define a directive from the following code.
+- `#if` : Conditional code inclusion.
 
 ## Standard Directives
 
