@@ -1,4 +1,4 @@
 /// test true
 
-0
+true
 

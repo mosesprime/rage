@@ -46,7 +46,7 @@ impl Lexeme {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LexemeKind {
     /// `my_func`, `MyStruct`
     Term,

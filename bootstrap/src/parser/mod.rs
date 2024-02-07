@@ -1,6 +1,8 @@
 //! Rage Bootstrap
 //! Parser
 
+use crate::syntax::lexeme::Lexeme;
+
 use self::{scanner::Scanner, tree::ParseTree};
 
 mod scanner;
@@ -11,20 +13,15 @@ pub trait Parse: Sized {
 }
 
 pub fn parse_file(content: &str) -> anyhow::Result<ParseTree> {
-    let mut scanner = Scanner::new(content);
-    while let Some(l) = scanner.next() {
-        println!("{l:?}");
-    }
-    // TODO: let mut parser = Parser::new(content);
-    //ParseTree::parse(&mut parser)
-    Ok(ParseTree::new())
+    let mut parser = Parser::new(content);
+    ParseTree::parse(&mut parser)
 }
 
 pub struct Parser<'a> {
     start: usize,
     end: usize,
     content: &'a str,
-    scanner: Scanner<'a>,
+    lexemes: std::iter::Peekable<Scanner<'a>>,
 }
 
 impl<'a> Parser<'a> {
@@ -33,12 +30,20 @@ impl<'a> Parser<'a> {
             start: 0,
             end: 0,
             content,
-            scanner: Scanner::new(content),
+            lexemes: Scanner::new(content).peekable(),
         }  
     }
 
     fn get_value(&self, start: usize, end: usize) -> Option<&str> {
         self.content.get(start..end)
+    }
+
+    pub fn next_lexeme(&mut self) -> Option<Lexeme> {
+        self.lexemes.next()
+    }
+
+    pub fn peek_lexeme(&mut self) -> Option<&Lexeme> {
+        self.lexemes.peek()
     }
 }
 

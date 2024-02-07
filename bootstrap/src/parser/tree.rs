@@ -1,6 +1,6 @@
 //! Rage Bootstrap
 
-use crate::syntax::Statement;
+use crate::syntax::{lexeme::{Lexeme, LexemeKind}, Statement, LiteralExpr};
 
 use super::Parse;
 
@@ -21,6 +21,20 @@ impl ParseTree {
 
 impl Parse for ParseTree {
     fn parse(parser: &mut super::Parser<'_>) -> Result<Self, anyhow::Error> {
-        todo!()
+        log::warn!("parse_tree is a work in progress");
+        while let Some(peek) = parser.peek_lexeme() {
+            match &peek.kind {
+                LexemeKind::Whitespace(_) | LexemeKind::Comment(_) => {
+                    // ignore whitespace and comments
+                    parser.next_lexeme();
+                },
+                LexemeKind::Literal(_) => {
+                    let x = LiteralExpr::parse(parser)?;
+                    println!("{x:?}");
+                },
+                _ => todo!(),
+            }
+        }
+        Ok(ParseTree::new())
     }
 }

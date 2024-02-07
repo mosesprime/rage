@@ -2,6 +2,12 @@
 //! Syntax
 //! Reference: https://github.com/dtolnay/syn
 
+use anyhow::bail;
+
+use crate::parser::Parse;
+
+use self::lexeme::LexemeKind;
+
 pub mod lexeme;
 
 pub enum Statement {
@@ -20,6 +26,24 @@ pub enum Expression {
     Binary(),
     Unary(),
     Return(),
+}
+
+#[derive(Debug)]
+pub struct LiteralExpr {
+    pub kind: LiteralKind,
+    pub value: Box<str>,
+    // pub span: Span,
+}
+
+impl Parse for LiteralExpr {
+    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
+        if let Some(lexeme) = parser.next_lexeme() {
+            if let LexemeKind::Literal(kind) = &lexeme.kind {
+                return Ok(Self { kind: kind.clone(), value: lexeme.value().expect("missing value").into() });
+            }
+        }
+        bail!("failed to parse")
+    }
 }
 
 /// Operator.
@@ -129,7 +153,7 @@ pub enum AssignmentOpKind {
     BitwiseRightShiftAssign,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum WhitespaceKind {
     /// space or tab
     Blank,
@@ -163,7 +187,7 @@ pub enum SeperatorKind {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LiteralKind {
     /// `0x55AA`
     Hex,
@@ -183,7 +207,7 @@ pub enum LiteralKind {
     String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CommentKind {
     /// ```
     /// // Hi Mom!
