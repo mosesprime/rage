@@ -2,7 +2,7 @@
 //! Syntax
 //! Reference: https://github.com/dtolnay/syn
 
-use anyhow::bail;
+use anyhow::{bail, Context, Ok};
 
 use crate::parser::Parse;
 
@@ -10,16 +10,39 @@ use self::lexeme::LexemeKind;
 
 pub mod lexeme;
 
+#[derive(Debug)]
 pub enum Statement {
-    Declaration(),
+    Declaration(Declaration),
     Expression(),
     //Return(),
 }
 
+impl Parse for Statement {
+    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
+        let first = parser.next_lexeme().context("missing lexeme")?;
+        let err = match first.kind {
+            LexemeKind::Term => {
+                let second = parser.next_lexeme().context(format!("Standalone term is unparsable: {:?}", parser.span()));
+                return Ok(Statement::Declaration(Declaration::Func(FuncDecl { label: first.value().expect("todo").into() }))); // TODO:
+            },
+            _ => {
+                bail!("Invalid start to a new statement: {:?}", parser.span());}
+            ,
+        };
+    }
+}
+
+#[derive(Debug)]
 pub enum Declaration {
     Loacl(),
-    Func(),
+    Func(FuncDecl),
     Struct(),
+}
+
+#[derive(Debug)]
+pub struct FuncDecl {
+    label: Box<str>,
+    // TODO:
 }
 
 pub enum Expression {
@@ -33,17 +56,6 @@ pub struct LiteralExpr {
     pub kind: LiteralKind,
     pub value: Box<str>,
     // pub span: Span,
-}
-
-impl Parse for LiteralExpr {
-    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
-        if let Some(lexeme) = parser.next_lexeme() {
-            if let LexemeKind::Literal(kind) = &lexeme.kind {
-                return Ok(Self { kind: kind.clone(), value: lexeme.value().expect("missing value").into() });
-            }
-        }
-        bail!("failed to parse")
-    }
 }
 
 /// Operator.
@@ -153,7 +165,7 @@ pub enum AssignmentOpKind {
     BitwiseRightShiftAssign,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum WhitespaceKind {
     /// space or tab
     Blank,
@@ -187,7 +199,7 @@ pub enum SeperatorKind {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum LiteralKind {
     /// `0x55AA`
     Hex,
@@ -207,7 +219,7 @@ pub enum LiteralKind {
     String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum CommentKind {
     /// ```
     /// // Hi Mom!

@@ -5,6 +5,7 @@ use crate::syntax::{lexeme::{Lexeme, LexemeKind}, Statement, LiteralExpr};
 use super::Parse;
 
 /// Suggared abstract syntax tree (AST) of a given source file.
+#[derive(Debug)]
 pub struct ParseTree {
     ///
     stmts: Vec<Statement>,
@@ -17,24 +18,9 @@ impl ParseTree {
         }
     }
 
-}
-
-impl Parse for ParseTree {
-    fn parse(parser: &mut super::Parser<'_>) -> Result<Self, anyhow::Error> {
-        log::warn!("parse_tree is a work in progress");
-        while let Some(peek) = parser.peek_lexeme() {
-            match &peek.kind {
-                LexemeKind::Whitespace(_) | LexemeKind::Comment(_) => {
-                    // ignore whitespace and comments
-                    parser.next_lexeme();
-                },
-                LexemeKind::Literal(_) => {
-                    let x = LiteralExpr::parse(parser)?;
-                    println!("{x:?}");
-                },
-                _ => todo!(),
-            }
-        }
-        Ok(ParseTree::new())
+    pub fn add(&mut self, stmt: Statement) {
+        log::debug!("adding statement: {:?}", stmt); // TODO: remove
+        self.stmts.push(stmt)
     }
 }
+

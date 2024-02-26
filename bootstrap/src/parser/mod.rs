@@ -1,7 +1,9 @@
 //! Rage Bootstrap
 //! Parser
 
-use crate::syntax::lexeme::Lexeme;
+use anyhow::Ok;
+
+use crate::syntax::{lexeme::{Lexeme, LexemeKind}, Statement};
 
 use self::{scanner::Scanner, tree::ParseTree};
 
@@ -12,11 +14,6 @@ pub trait Parse: Sized {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error>;
 }
 
-pub fn parse_file(content: &str) -> anyhow::Result<ParseTree> {
-    let mut parser = Parser::new(content);
-    ParseTree::parse(&mut parser)
-}
-
 pub struct Parser<'a> {
     start: usize,
     end: usize,
@@ -25,7 +22,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(content: &'a str) -> Self {
+    pub fn new(content: &'a str) -> Self {
         Self { 
             start: 0,
             end: 0,
@@ -34,16 +31,54 @@ impl<'a> Parser<'a> {
         }  
     }
 
-    fn get_value(&self, start: usize, end: usize) -> Option<&str> {
+    pub fn start(mut self) -> anyhow::Result<ParseTree> {
+        let mut tree = ParseTree::new();
+        while let Some(first) = self.peek_lexeme() {
+            match first.kind {
+                LexemeKind::Whitespace(_) | LexemeKind::Comment(_) => {
+                    self.consume_lexeme(); // should contain some already peeked lexeme
+                },
+                _ => { 
+                    tree.add(Statement::parse(&mut self)?);
+                },
+            }
+        }
+        Ok(tree)
+    }
+
+    pub fn get_value(&self, start: usize, end: usize) -> Option<&str> {
         self.content.get(start..end)
     }
 
-    pub fn next_lexeme(&mut self) -> Option<Lexeme> {
-        self.lexemes.next()
+    // 
+    pub fn consume_lexeme(&mut self) -> Option<Lexeme> {
+        if let Some(lexeme) = self.lexemes.next() {
+            self.start = self.end;
+            self.end += lexeme.count();
+            return Some(lexeme);
+        }
+        None
     }
 
     pub fn peek_lexeme(&mut self) -> Option<&Lexeme> {
         self.lexemes.peek()
+    }
+
+    /// Returns the next non-whitespace & non-comment [Lexeme] if able.
+    /// Use consume_lexeme() if you want these tokens to be included in iteration.
+    pub fn next_lexeme(&mut self) -> Option<Lexeme> {
+        if let Some(lexeme) = self.consume_lexeme() {
+            return match lexeme.kind {
+                LexemeKind::Whitespace(_) | LexemeKind::Comment(_) => self.next_lexeme(),
+                _ => Some(lexeme),
+            }
+        }
+        None
+    }
+
+    /// Returns the (start, end) tuple representing the current char indecies.
+    pub fn span(&self) -> (usize, usize) {
+        (self.start, self.end)
     }
 }
 

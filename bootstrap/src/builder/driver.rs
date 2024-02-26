@@ -5,7 +5,7 @@ use std::{fs::{Metadata, ReadDir}, thread::{self, JoinHandle}, sync::mpsc::{self
 
 use anyhow::{Context, anyhow};
 
-use crate::parser::{parse_file, tree::ParseTree};
+use crate::parser::{tree::ParseTree, Parser};
 
 use super::{incrimental::Incrimental, source::Source};
 
@@ -180,8 +180,10 @@ impl BuildTask {
             BuildTask::Parse { source } => {
                 if let Incrimental::RawText(text) = source.incrimental {
                     // TODO: remove expect
-                    let parse_tree = parse_file(text.as_str()).expect("parse error");
-                    return BuildEvent::Parsed { parse_tree };
+                    match Parser::new(text.as_str()).start() {
+                        Ok(parse_tree) => return BuildEvent::Parsed { parse_tree },
+                        Err(e) => e,
+                    }
                 } else {
                     anyhow!("missing source text")
                 }

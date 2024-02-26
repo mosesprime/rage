@@ -47,6 +47,7 @@ impl Builder {
                         BuildEvent::Parsed { parse_tree } => {
                             //println!("{parse_tree}");
                         },
+                        BuildEvent::Error(e) => return Err(e),
                         _ => unimplemented!(),
                     }
                 }
