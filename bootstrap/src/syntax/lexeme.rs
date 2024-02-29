@@ -3,7 +3,7 @@
 
 use crate::common::Either;
 
-use super::{CommentKind, LiteralKind, WhitespaceKind};
+use super::{keywords::KeywordKind, CommentKind, LiteralKind, WhitespaceKind};
 
 /// A lexical token.
 #[derive(Debug)]
@@ -56,6 +56,8 @@ pub enum LexemeKind {
     Comment(CommentKind),
     /// `5`
     Literal(LiteralKind),
+    ///
+    Keyword(KeywordKind),
 
     /// !
     Exclamation,

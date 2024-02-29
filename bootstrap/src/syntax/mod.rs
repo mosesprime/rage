@@ -8,6 +8,7 @@ use crate::parser::Parse;
 
 use self::lexeme::LexemeKind;
 
+pub mod keywords;
 pub mod lexeme;
 
 #[derive(Debug)]

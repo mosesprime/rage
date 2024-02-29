@@ -3,7 +3,7 @@
 
 use std::str::Chars;
 
-use crate::syntax::{lexeme::{Lexeme, LexemeKind}, CommentKind, LiteralKind, WhitespaceKind};
+use crate::syntax::{keywords::KeywordKind, lexeme::{Lexeme, LexemeKind}, CommentKind, LiteralKind, WhitespaceKind};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
@@ -143,7 +143,10 @@ impl Iterator for Scanner<'_> {
         return match text {
             "true" => Lexeme::with_value(LexemeKind::Literal(LiteralKind::Bool), text),
             "false" => Lexeme::with_value(LexemeKind::Literal(LiteralKind::Bool), text),
-            _ => Lexeme::with_value(LexemeKind::Term, text),
+            t => match KeywordKind::from(t) {
+                KeywordKind::UNKNOWN => Lexeme::with_value(LexemeKind::Term, t),
+                k => Lexeme::with_length(LexemeKind::Keyword(k), length),
+            },
         };
     }
 

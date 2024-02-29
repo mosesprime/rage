@@ -8,6 +8,7 @@ use crate::syntax::{lexeme::{Lexeme, LexemeKind}, Statement};
 use self::{scanner::Scanner, tree::ParseTree};
 
 mod scanner;
+mod span;
 pub mod tree;
 
 pub trait Parse: Sized {
