@@ -1,6 +1,10 @@
 //! Rage Bootstrap
 //! Common 
 
+use anyhow::{Context, Ok};
+
+use crate::{parser::Parse, syntax::{keywords::KeywordKind, lexeme::LexemeKind}};
+
 #[derive(Debug, Clone)]
 pub enum Either<L, R> {
     Left(L),
@@ -29,6 +33,18 @@ pub enum Mutability {
     Unknown,
 }
 
+impl Parse for Mutability {
+    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
+        if let Some(lexeme) = parser.peek_lexeme() {
+            if lexeme.kind == LexemeKind::Keyword(KeywordKind::Mut) {
+                parser.next_lexeme().unwrap();
+                return Ok(Mutability::Mutable);
+            }
+        }
+        Ok(Mutability::Unknown)
+    }
+}
+
 ///
 #[derive(Debug)]
 pub enum Visability {
@@ -38,6 +54,18 @@ pub enum Visability {
     Private,
     /// Undetermined visability. Assumed private.
     Unknown,
+}
+
+impl Parse for Visability {
+    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
+        if let Some(lexeme) = parser.peek_lexeme() {
+            if lexeme.kind == LexemeKind::Keyword(KeywordKind::Pub) {
+                parser.next_lexeme().unwrap();
+                return Ok(Visability::Public);
+            }
+        }
+        Ok(Visability::Unknown)
+    }
 }
 
 /// Core Rage directives.

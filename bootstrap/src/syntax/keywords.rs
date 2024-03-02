@@ -1,6 +1,6 @@
 //! Rage Bootstrap Keywords
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum KeywordKind {
     Pub,
     Mod,

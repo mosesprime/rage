@@ -3,7 +3,7 @@
 
 use crate::common::Either;
 
-use super::{keywords::KeywordKind, CommentKind, LiteralKind, WhitespaceKind};
+use super::{keywords::KeywordKind, symbol::SymbolKind, CommentKind, LiteralKind, WhitespaceKind};
 
 /// A lexical token.
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl Lexeme {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LexemeKind {
     /// `my_func`, `MyStruct`
     Term,
@@ -58,127 +58,8 @@ pub enum LexemeKind {
     Literal(LiteralKind),
     ///
     Keyword(KeywordKind),
-
-    /// !
-    Exclamation,
-    /// "
-    Quotation,
-    /// #
-    Number,
-    /// $
-    Dollar,
-    /// %
-    Percent,
-    /// &
-    Ampersand,
-    /// '
-    Apostrophe,
-    /// (
-    LParen,
-    /// )
-    RParen,
-    /// *
-    Asterisk,
-    /// +
-    Plus,
-    /// ,
-    Comma,
-    /// -
-    Hyphen,
-    /// .
-    Dot,
-    /// /
-    Slash,
-    /// :
-    Colon,
-    /// ;
-    Semicolon,
-    /// <
-    Lesser,
-    /// =
-    Equal,
-    /// >
-    Greater,
-    /// ?
-    Question,
-    /// @
-    At,
-    /// [
-    LSquare,
-    /// \
-    Backslash,
-    /// ]
-    RSquare,
-    /// ^
-    Caret,
-    /// _
-    Underscore,
-    /// `
-    Accent,
-    /// {
-    LCurly,
-    /// |
-    Pipe,
-    /// }
-    RCurly,
-    /// ~
-    Tilde,
-    
-    /// `==`
-    EqualEqual,
-    /// `!=`
-    NotEqual,
-    /// `>=`
-    GreaterOrEqual,
-    /// `<=`
-    LesserOrEqual,
-
-    /// `&&`
-    AndAnd,
-    /// `||`
-    OrOr,
-
-    /// `<<`
-    LeftShift,
-    /// `>>`
-    RightShift,
-    /// `<<<`
-    LeftRotate,
-    /// `>>>`
-    RightRotate,
-
-    /// `+=`
-    PlusEqual,
-    /// `-=`
-    MinusEqual,
-    /// `*=`
-    MultiplyEqual,
-    /// `/=`
-    DivideEqual,
-    /// `%=`
-    ModuloEqual,
-    /// `&=`
-    AndEqual,
-    /// `|=`
-    OrEqual,
-    /// `^=`
-    XorEqual,
-    /// `<<=`
-    LeftShiftEqual,
-    /// `>>=`
-    RightShiftEqual,
-
-    /// `++`
-    Incriment,
-    /// `--`
-    Decriment,
-
-    /// `..`
-    ExclusiveRange,
-    /// `..=`
-    InclusiveRange,
-    /// `...`
-    Ellipsis,
+    ///
+    Symbol(SymbolKind),
 
     /// Unknown. Likely an error.
     UNKNOWN,

@@ -1,4 +1,5 @@
-pub enum Symbol {
+#[derive(Debug, Clone, PartialEq)]
+pub enum SymbolKind {
     /// !
     Exclamation,
     /// "
@@ -63,5 +64,61 @@ pub enum Symbol {
     RCurly,
     /// ~
     Tilde,
+    
+    /// `==`
+    EqualEqual,
+    /// `!=`
+    NotEqual,
+    /// `>=`
+    GreaterOrEqual,
+    /// `<=`
+    LesserOrEqual,
+
+    /// `&&`
+    AndAnd,
+    /// `||`
+    OrOr,
+
+    /// `<<`
+    LeftShift,
+    /// `>>`
+    RightShift,
+    /// `<<<`
+    LeftRotate,
+    /// `>>>`
+    RightRotate,
+
+    /// `+=`
+    PlusEqual,
+    /// `-=`
+    MinusEqual,
+    /// `*=`
+    MultiplyEqual,
+    /// `/=`
+    DivideEqual,
+    /// `%=`
+    ModuloEqual,
+    /// `&=`
+    AndEqual,
+    /// `|=`
+    OrEqual,
+    /// `^=`
+    XorEqual,
+    /// `<<=`
+    LeftShiftEqual,
+    /// `>>=`
+    RightShiftEqual,
+
+    /// `++`
+    Incriment,
+    /// `--`
+    Decriment,
+
+    /// `..`
+    ExclusiveRange,
+    /// `..=`
+    InclusiveRange,
+    /// `...`
+    Ellipsis,
 }
 

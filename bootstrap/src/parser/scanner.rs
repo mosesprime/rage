@@ -3,7 +3,7 @@
 
 use std::str::Chars;
 
-use crate::syntax::{keywords::KeywordKind, lexeme::{Lexeme, LexemeKind}, CommentKind, LiteralKind, WhitespaceKind};
+use crate::syntax::{keywords::KeywordKind, lexeme::{Lexeme, LexemeKind}, symbol::SymbolKind, CommentKind, LiteralKind, WhitespaceKind};
 
 /// Lexiacal Tokenizer.
 pub struct Scanner<'a> {
@@ -219,63 +219,63 @@ impl Iterator for Scanner<'_> {
             '!' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::NotEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::NotEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Exclamation, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Exclamation), 1),
             },
-            //'"' => LexemeKind::Quotation,
-            '#' => return Lexeme::with_length(LexemeKind::Number, 1),
-            '$' => return Lexeme::with_length(LexemeKind::Dollar, 1),
+            //'"' => LexemeKind::Quotation, // handled as string
+            '#' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Number), 1),
+            '$' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Dollar), 1),
             '%' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::ModuloEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::ModuloEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Percent, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Percent), 1),
             },
             '&' => match scanner.peek_char() {
                 Some('&') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::AndAnd, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::AndAnd), 2);
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::AndEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::AndEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Ampersand, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Ampersand), 1),
             },
-            //'\'' => LexemeKind::Apostrophe,
-            '(' => return Lexeme::with_length(LexemeKind::LParen, 1),
-            ')' => return Lexeme::with_length(LexemeKind::RParen, 1),
+            //'\'' => LexemeKind::Apostrophe, // handled as char
+            '(' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LParen), 1),
+            ')' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RParen), 1),
             '*' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::MultiplyEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::MultiplyEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Asterisk, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Asterisk), 1),
             },
             '+' => match scanner.peek_char() {
                 Some('+') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::Incriment, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Incriment), 2);
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::PlusEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::PlusEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Plus, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Plus), 1),
             },
-            ',' => return Lexeme::with_length(LexemeKind::Comma, 1),
+            ',' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Comma), 1),
             '-' => match scanner.peek_char() {
                 Some('-') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::Decriment, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Decriment), 2);
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::MinusEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::MinusEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Hyphen, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Hyphen), 1),
             },
             '.' => match scanner.peek_char() {
                 Some('.') => {
@@ -283,57 +283,57 @@ impl Iterator for Scanner<'_> {
                     match scanner.peek_char() {
                         Some('.') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::Ellipsis, 3);
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Ellipsis), 3);
                         },
                         Some('=') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::InclusiveRange, 3); 
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::InclusiveRange), 3); 
                         },
-                        _ => return Lexeme::with_length(LexemeKind::ExclusiveRange, 2),
+                        _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::ExclusiveRange), 2),
                     }
                 },
-                _ => return Lexeme::with_length(LexemeKind::Dot, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Dot), 1),
             },
             '/' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::DivideEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::DivideEqual), 2);
                 },
                 Some('/') => {
                     scanner.next_char();
                     return comment(scanner);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Slash, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Slash), 1),
             },
-            ':' => return Lexeme::with_length(LexemeKind::Colon, 1),
-            ';' => return Lexeme::with_length(LexemeKind::Semicolon, 1),
+            ':' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Colon), 1),
+            ';' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Semicolon), 1),
             '<' => match scanner.peek_char() {
                 Some('<') => {
                     scanner.next_char();
                     match scanner.peek_char() {
                         Some('<') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::LeftRotate, 3);
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LeftRotate), 3);
                         },
                         Some('=') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::LeftShiftEqual, 3);
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LeftShiftEqual), 3);
                         },
-                        _ => return Lexeme::with_length(LexemeKind::LeftShift, 2),
+                        _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LeftShift), 2),
                     }
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::LesserOrEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LesserOrEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Lesser, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Lesser), 1),
             },
             '=' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::EqualEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::EqualEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Equal, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Equal), 1),
             },
             '>' => match scanner.peek_char() {
                 Some('>') => {
@@ -341,49 +341,49 @@ impl Iterator for Scanner<'_> {
                     match scanner.peek_char() {
                         Some('>') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::RightRotate, 3);
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RightRotate), 3);
                         },
                         Some('=') => {
                             scanner.next_char();
-                            return Lexeme::with_length(LexemeKind::RightShiftEqual, 3);
+                            return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RightShiftEqual), 3);
                         },
-                        _ => return Lexeme::with_length(LexemeKind::RightShift, 2),
+                        _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RightShift), 2),
                     }
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::GreaterOrEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::GreaterOrEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Greater, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Greater), 1),
             },
-            //'?' => LexemeKind::Question,
-            //'@' => LexemeKind::At,
-            '[' => return Lexeme::with_length(LexemeKind::LSquare, 1),
-            //'\\' => LexemeKind::Backslash,
-            ']' => return Lexeme::with_length(LexemeKind::RSquare, 1),
+            '?' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Question), 1),
+            '@' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::At), 1),
+            '[' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LSquare), 1),
+            '\\' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Backslash), 1),
+            ']' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RSquare), 1),
             '^' => match scanner.peek_char() {
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::XorEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::XorEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Caret, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Caret), 1),
             },
-            //'_' => LexemeKind::Underscore,
-            //'`' => LexemeKind::Accent,
-            '{' => return Lexeme::with_length(LexemeKind::LCurly, 1),
+            '_' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Underscore), 1),
+            '`' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Accent), 1),
+            '{' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::LCurly), 1),
             '|' => match scanner.peek_char() {
                 Some('|') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::OrOr, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::OrOr), 2);
                 },
                 Some('=') => {
                     scanner.next_char();
-                    return Lexeme::with_length(LexemeKind::OrEqual, 2);
+                    return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::OrEqual), 2);
                 },
-                _ => return Lexeme::with_length(LexemeKind::Pipe, 1),
+                _ => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Pipe), 1),
             },
-            '}' => return Lexeme::with_length(LexemeKind::RCurly, 1),
-            '~' => return Lexeme::with_length(LexemeKind::Tilde, 1),
+            '}' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::RCurly), 1),
+            '~' => return Lexeme::with_length(LexemeKind::Symbol(SymbolKind::Tilde), 1),
             _ => return Lexeme::with_length(LexemeKind::UNKNOWN, 1),
         }
     }

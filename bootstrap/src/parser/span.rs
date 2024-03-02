@@ -1,16 +1,27 @@
 //! Rage Bootstrap Span
 
-/// Position within source code.
-pub struct Location {
-    /// Source 0-indexed line position.
-    pub line: u32,
-    /// Source 0-indexed character offset.
-    pub offset: u32,
-}
-
-/// Range of positions in source code.
+/// Range of char indecies in source code.
+#[derive(Debug)]
 pub struct Span {
-    pub start: Location,
-    pub end: Location,
+    pub start: usize,
+    pub end: usize,
 }
 
+impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+}
+
+///
+#[derive(Debug)]
+pub struct Location {
+    pub line: usize,
+    pub char: usize,
+}
+
+impl Location {
+    pub fn new(line: usize, char: usize) -> Self {
+        Self { line, char }
+    }
+}

@@ -2,6 +2,6 @@
 * Example Hello Program
 */
 
-main() {
+pub main() {
     println("Hi mom!")
 }

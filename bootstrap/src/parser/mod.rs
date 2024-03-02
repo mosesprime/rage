@@ -8,7 +8,7 @@ use crate::syntax::{lexeme::{Lexeme, LexemeKind}, Statement};
 use self::{scanner::Scanner, tree::ParseTree};
 
 mod scanner;
-mod span;
+pub mod span;
 pub mod tree;
 
 pub trait Parse: Sized {
@@ -16,8 +16,8 @@ pub trait Parse: Sized {
 }
 
 pub struct Parser<'a> {
-    start: usize,
-    end: usize,
+    cursor: usize,
+    buffer: Vec<(Lexeme, usize)>,
     content: &'a str,
     lexemes: std::iter::Peekable<Scanner<'a>>,
 }
@@ -25,8 +25,8 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(content: &'a str) -> Self {
         Self { 
-            start: 0,
-            end: 0,
+            cursor: 0,
+            buffer: Vec::default(),
             content,
             lexemes: Scanner::new(content).peekable(),
         }  
@@ -54,8 +54,7 @@ impl<'a> Parser<'a> {
     // 
     pub fn consume_lexeme(&mut self) -> Option<Lexeme> {
         if let Some(lexeme) = self.lexemes.next() {
-            self.start = self.end;
-            self.end += lexeme.count();
+            self.cursor += lexeme.count();
             return Some(lexeme);
         }
         None
@@ -77,9 +76,21 @@ impl<'a> Parser<'a> {
         None
     }
 
-    /// Returns the (start, end) tuple representing the current char indecies.
-    pub fn span(&self) -> (usize, usize) {
-        (self.start, self.end)
+    /// Returns the char cursor index.
+    pub fn get_cursor(&self) -> usize {
+        self.cursor
+    }
+
+    pub fn push_buffer(&mut self, lexeme: Lexeme, start_index: usize) {
+        self.buffer.push((lexeme, start_index))
+    }
+
+    pub fn clear_buffer(&mut self) {
+        self.buffer.clear()
+    }
+
+    pub fn get_buffer(&self) -> &'_ [(Lexeme, usize)] {
+        self.buffer.as_slice()
     }
 }
 
