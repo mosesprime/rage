@@ -17,10 +17,11 @@ fn main() -> anyhow::Result<()> {
     let start_time = SystemTime::now();
 
     //let root_path: PathBuf = "./examples/demo.rg".into();
-    //let root_path: PathBuf = "./examples/hello.rg".into();
-    let root_path: PathBuf = "./examples/true.rg".into();
+    let root_path: PathBuf = "./examples/hello.rg".into();
+    //let root_path: PathBuf = "./examples/true.rg".into();
     //let num_cpus = std::thread::available_parallelism().context("unable to get number of available threads")?.into();
     let num_cpus = 1;
+    log::info!("building {}", root_path.display());
     let mut builder = Builder::new(root_path, num_cpus)?;
 
     let instruction_tree = match builder.run() {

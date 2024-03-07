@@ -4,7 +4,7 @@
 
 use anyhow::{bail, Context, Ok};
 
-use crate::{common::{Mutability, Visability}, parser::{Parse, span::Span, Parser}};
+use crate::{common::{Attribute, Attributes, Mutability, Visability}, parser::{span::Span, Parse, Parser}};
 
 use self::{keywords::KeywordKind, lexeme::LexemeKind, symbol::SymbolKind};
 
@@ -21,8 +21,7 @@ pub enum Statement {
 
 impl Parse for Statement {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error> {
-        let first = parser.peek_lexeme().context("missing lexeme")?;
-        log::debug!("{:?}", first);
+        let first = parser.peek_lexeme().context("missing lexeme for statement")?;
         match first.kind {
             LexemeKind::Keyword(keywords::KeywordKind::Return) => {
                 Ok(Statement::Return(ReturnStmt::parse(parser)?))
@@ -46,12 +45,19 @@ pub enum Expression {
 
 impl Parse for Expression {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error> {
-        let first = parser.next_lexeme().context("missing lexeme")?;
-        // TODO: 
-        match first.kind {
-            LexemeKind::Term => todo!(),
-            LexemeKind::Literal(_) => Ok(Expression::Literal(LiteralExpr::parse(parser)?)),
-            _ => unimplemented!(),
+        if let Some(peek) = parser.peek_lexeme() {
+            match peek.kind {
+                LexemeKind::Whitespace(_)
+                | LexemeKind::Comment(_) => {
+                    parser.consume_lexeme();
+                    return Expression::parse(parser);
+                },
+                LexemeKind::Term => todo!(),
+                LexemeKind::Literal(_) => Ok(Expression::Literal(LiteralExpr::parse(parser)?)),
+                _ => todo!(),
+            }
+        } else {
+            bail!("missing lexeme for expression")
         }
     }
 }
@@ -66,15 +72,11 @@ pub enum Declaration {
 impl Parse for Declaration {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error> {
         let start = parser.get_cursor();
-        let first = parser.next_lexeme().context("missing lexeme")?;
+        let first = parser.next_lexeme().context("missing lexeme for declaration")?;
+        let attrs = Attributes::parse(parser)?;
+        let mutable = Mutability::parse(parser)?;
+        let visable = Visability::parse(parser)?;
         match first.kind {
-            // 'pub' MyType struct {}
-            LexemeKind::Keyword(KeywordKind::Pub)
-            // 'mut' a = 5
-            | LexemeKind::Keyword(KeywordKind::Mut) => {
-                parser.push_buffer(first, start);
-                Ok(Declaration::parse(parser)?)
-            },
             // 'MyType' struct {}
             LexemeKind::Term => {
                 parser.push_buffer(first, start);
@@ -133,7 +135,7 @@ pub struct ReturnStmt {
 impl Parse for ReturnStmt {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error> {
         let start = parser.get_cursor();
-        let _ = parser.next_lexeme().unwrap(); // the 'return' lexeme 
+        let _ = parser.next_lexeme().context("missing lexeme for return statement")?;
         let expr = Expression::parse(parser)?;
         let end = parser.get_cursor();
         Ok(Self { inner: expr, span: Span::new(start, end) })
@@ -166,7 +168,7 @@ pub struct LiteralExpr {
 impl Parse for LiteralExpr {
     fn parse(parser: &mut Parser<'_>) -> Result<Self, anyhow::Error> {
         let start = parser.get_cursor();
-        let lexeme = parser.next_lexeme().context("missing lexeme")?;
+        let lexeme = parser.next_lexeme().context("missing lexeme for literal expression")?;
         let kind = match lexeme.kind {
             LexemeKind::Literal(lit) => lit,
             _ => bail!("Can not parse non-literal into literal expression."),

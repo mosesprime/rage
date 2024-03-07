@@ -103,10 +103,18 @@ impl Directive {
 /// Core Rage attributes.
 #[derive(Debug)]
 pub enum Attribute {
-    Constant,
-    Mutable,
-    Public,
     Inline(Inlinedness),
+}
+
+#[derive(Debug)]
+pub struct Attributes(Vec<Attribute>);
+
+impl Parse for Attributes {
+    fn parse(parser: &mut crate::parser::Parser<'_>) -> Result<Self, anyhow::Error> {
+        let attrs = Attributes(vec![]);
+        log::error!("parsing attributes is WIP");
+        Ok(attrs)
+    }
 }
 
 /// 
