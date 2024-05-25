@@ -1,0 +1,11 @@
+[package]
+name = "rage-boot"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rage-boot"
+path = "boot/main.rs"
+
+[dependencies]
+ecow = "0.2.2"
