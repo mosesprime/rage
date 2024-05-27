@@ -1,5 +1,5 @@
 use std::str::Chars;
-use super::{error::{LexicalError, LexicalErrorKind}, lexeme::{Lexeme, Span}};
+use super::{error::{LexicalError, LexicalErrorKind}, lexeme::{str_to_keyword, Lexeme, Span}};
 
 pub struct Tokenizer<'a> {
     source: &'a str,
@@ -130,7 +130,11 @@ impl<'a> Tokenizer<'a> {
         let len = self.consume(|c| c.is_alphanumeric() || c == '_');
         let span = Span::new(start, len);
         let raw = self.get_span(&span).map_err(|e| LexicalError::new(e, span))?;
-        Ok((span, Lexeme::Label(raw.into())))
+        if let Some(lex) = str_to_keyword(raw) {
+            Ok((span, lex))
+        } else {
+            Ok((span, Lexeme::Label(raw.into())))
+        }
     }
 
     fn handle_hex(&mut self) -> Result<(Span, Lexeme), LexicalError> {

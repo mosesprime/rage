@@ -55,3 +55,12 @@ fn tokenize_binary() {
         assert!(false)
     }
 }
+
+#[test]
+fn tokenize_keyword() {
+    if let Some(Ok((_, l))) = Tokenizer::new("pub").next() {
+        assert_eq!(l, Lexeme::Pub)
+    } else {
+        assert!(false)
+    }
+}
