@@ -1,4 +1,4 @@
-use crate::parse::lexeme::{Lexeme, Span};
+use crate::lexer::lexeme::{Lexeme, Span};
 
 use super::{error::{LexicalError, LexicalErrorKind}, tokenize::Tokenizer};
 

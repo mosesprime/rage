@@ -1,6 +1,4 @@
-use parse::tokenize::Tokenizer;
-
-mod parse;
+use rage_boot::lexer::tokenize::Tokenizer;
 
 fn main() {
     let sample = std::fs::read_to_string("example/hello.rg").expect("failed to load example/hello.rg");

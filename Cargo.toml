@@ -3,9 +3,14 @@ name = "rage-boot"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "rage_boot"
+path = "boot/lib.rs"
+
 [[bin]]
 name = "rage-boot"
 path = "boot/main.rs"
 
 [dependencies]
+blake3 = "1.5.1"
 ecow = "0.2.2"
